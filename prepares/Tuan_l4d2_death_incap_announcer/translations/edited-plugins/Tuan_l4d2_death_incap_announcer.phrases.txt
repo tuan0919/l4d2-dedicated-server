@@ -26,7 +26,7 @@
 	{
 		"#format"	"{1:s}, {2:s}"
 		"en"	"{blue}{1} {default}bị gạt giò {olive}({2})"
-	}  //-----------------------------------------------------------------------
+	}	
 	//{1}: tên attacker | {2}: tên nạn nhân | {3}: tên vũ khí
 	"Infected_Incap_Survivor"
 	{
@@ -50,7 +50,7 @@
 	{
 		"#format"	"{1:s}, {2:s}"
 		"en"	"{blue}{1} {default}chết {olive}({2})"  
-	}  //-----------------------------------------------------------------------
+	}
 	//{1}: tên attacker | {2}: tên nạn nhân | {3}: tên vũ khí
 	"Infected_Kill_Survivor"
 	{
