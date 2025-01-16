@@ -122,7 +122,7 @@ public OnPluginStart()
 void LoadTrans()
 {
 	char path[256];
-	BuildPath(Path_SM, path, sizeof(path), "translations/edited-plugins/%s.txt", TRANSLATION_FILENAME);
+	BuildPath(Path_SM, path, sizeof(path), "translations/%s.txt", TRANSLATION_FILENAME);
 	if (FileExists(path)) {
 		LoadTranslations(TRANSLATION_FILENAME);
 	}

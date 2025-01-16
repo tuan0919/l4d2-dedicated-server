@@ -39,7 +39,7 @@ Change Log:
 
 #define CONFIG_FILENAME  "Tuan_l4d2_item_marker"
 #define TRANSLATION_FILENAME "Tuan_l4d2_item_marker.phrases"
-#define CONFIG_FILE "configs/edited-plugins/item_markers.cfg"
+#define CONFIG_FILE "configs/Tuan_l4d2_item_marker.cfg"
 
 // ====================================================================================================
 // Plugin Info - define
@@ -281,7 +281,7 @@ public void OnPluginStart()
 	
 	// Chuẩn bị gamedata, vì cần sử dụng SDKCall CTerrorPlayer::FindUseEntity(float,float,float,bool *,bool)
 	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, sizeof(sPath), "gamedata/edited-plugins/%s.txt", GAMEDATA);
+	BuildPath(Path_SM, sPath, sizeof(sPath), "gamedata/%s.txt", GAMEDATA);
 	if( FileExists(sPath) == false ) SetFailState("\n==========\nMissing required file: \"%s\"\n==========", sPath);
 
 	Handle hGameData = LoadGameConfigFile(GAMEDATA);
@@ -338,11 +338,11 @@ public void OnClientCookiesCached(int client)
 void LoadPluginTranslations()
 {
     char path[256];
-	BuildPath(Path_SM, path, sizeof(path), "translations/edited-plugins/%s.txt", TRANSLATION_FILENAME);
+	BuildPath(Path_SM, path, sizeof(path), "translations/%s.txt", TRANSLATION_FILENAME);
     if (FileExists(path))
         LoadTranslations(TRANSLATION_FILENAME);
     else
-        SetFailState("Missing required translation file on \"translations/edited-plugins/%s.txt\", please re-download.", TRANSLATION_FILENAME);
+        SetFailState("Missing required translation file on \"translations/%s.txt\", please re-download.", TRANSLATION_FILENAME);
 }
 
 void ParseConfigFile()

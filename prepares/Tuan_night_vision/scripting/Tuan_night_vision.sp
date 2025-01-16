@@ -10,7 +10,7 @@ Change Log:
 // Filenames
 // ====================================================================================================
 
-#define FILE_DATA "configs/edited-plugins/night_vision.cfg"
+#define FILE_DATA "configs/Tuan_l4d2_night_vision.cfg"
 #define FILE_TRANS "Tuan_l4d2_night_vision.phrases"
 
 // ====================================================================================================
@@ -152,11 +152,11 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 void LoadPluginTranslations()
 {
 	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, PLATFORM_MAX_PATH, "translations/edited-plugins/%s.txt", FILE_TRANS);
+	BuildPath(Path_SM, sPath, PLATFORM_MAX_PATH, "translations/%s.txt", FILE_TRANS);
 	if (FileExists(sPath))
         LoadTranslations(FILE_TRANS);
 	else
-        SetFailState("Missing required translation file on \"translations/edited-plugins/%s.txt\", please re-download.", FILE_TRANS);
+        SetFailState("Missing required translation file on \"translations/%s.txt\", please re-download.", FILE_TRANS);
 }
 
 public void OnConfigsExecuted()
