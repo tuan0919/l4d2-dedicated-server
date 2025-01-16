@@ -1,0 +1,36 @@
+"Phrases"
+{
+	"Settings Menu - Title"
+	{
+		"en"	"Night Vision Settings"
+	}
+	"Settings Menu - Toggle"
+	{
+		"en"	"Night Vision Toggle"
+	}
+	"Settings Menu - Select"
+	{
+		"en"	"Choose another Color Correction"
+	}
+	"Settings Menu - Current"
+	{
+		"en"	"Current Setting:"
+	}
+	"Settings Menu - Intensity_Increase"
+	{
+		"en"	"Increase intensity"
+	}
+	"Settings Menu - Intensity_Decrease"
+	{
+		"en"	"Decrease intensity"
+	}
+	"Color Corrections Menu - Title"
+	{
+		"en"	"Avaiable Color Corrections"
+	}
+	"Color Corrections Menu - Current"
+	{
+		"#format"	"{1:s}"
+		"en"	"Current: {1}"
+	}
+}

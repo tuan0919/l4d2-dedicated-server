@@ -1,0 +1,35 @@
+"Phrases"
+{
+	"Player Marked Item"
+	{
+		"#format"	"{1:N},{2:s}"
+		"en"	"{blue}{1} {default}đã {olive}đánh dấu {default}một {blue}[{2}]"
+	}
+	"Player Got Marked Item"
+	{
+		"#format"	"{1:N},{2:s}"
+		"en"	"{blue}{1} {default}đã {olive}nhận được {default}một {blue}[{2}] {default}được {olive}đánh dấu"
+	}
+	"Player In Cooldown Message"
+	{
+		"#format"	"{1:s}"
+		"en"	"{default}Không thể {olive}đánh dấu {default}vào lúc này. {olive}({default}chờ: {blue}{1}{olive} {default}giây{olive})"
+	}
+	"Player Ready To Use"
+	{
+		"en"	"{default}Tính năng {olive}Đánh dấu {default}đã sẵn sàng để sử dụng"
+	}
+	"Marker Setting Menu - Title"
+	{
+		"en"	"Marker Settings"
+	}
+	"Color List Menu - Title"
+	{
+		"en"	"Available Colors"
+	}
+	"Color List Menu - Current"
+	{
+		"#format"	"{1:s}"
+		"en"	"Current Chosen: {1}"
+	}
+}
