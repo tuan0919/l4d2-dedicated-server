@@ -71,7 +71,8 @@ static const char ENTITY_VALUEs[][] = {
 #define HUD_TIMEOUT	5.0
 #define HUD_WIDTH	0.3
 #define HUD_SLOT	4
-#define CLASSNAME_INFECTED            "infected"
+#define HUD_POSITION_X 0.65
+#define CLASSNAME_INFECTED            "Infected"
 #define CLASSNAME_WITCH               "witch"
 #define TEAM_SURVIVOR		2
 #define TEAM_INFECTED		3
@@ -89,12 +90,12 @@ static float g_HUDpos[][] = {
 
     // kill list
 	// {x, y, width, height}
-    {0.0,0.04,HUD_WIDTH,0.04}, // 9
-    {0.0,0.08,HUD_WIDTH,0.04}, // 10
-    {0.0,0.12,HUD_WIDTH,0.04},
-    {0.0,0.16,HUD_WIDTH,0.04},
-    {0.0,0.20,HUD_WIDTH,0.04},
-    {0.0,0.24,HUD_WIDTH,0.04}, // 14
+    {HUD_POSITION_X,0.04,HUD_WIDTH,0.04}, // 9
+    {HUD_POSITION_X,0.08,HUD_WIDTH,0.04}, // 10
+    {HUD_POSITION_X,0.12,HUD_WIDTH,0.04},
+    {HUD_POSITION_X,0.16,HUD_WIDTH,0.04},
+    {HUD_POSITION_X,0.20,HUD_WIDTH,0.04},
+    {HUD_POSITION_X,0.24,HUD_WIDTH,0.04}, // 14
 };
 static int g_iHUDFlags_Normal = HUD_FLAG_TEXT | HUD_FLAG_ALIGN_LEFT | HUD_FLAG_NOBG | HUD_FLAG_TEAM_SURVIVORS;
 static int g_iHUDFlags_Newest = HUD_FLAG_TEXT | HUD_FLAG_ALIGN_LEFT | HUD_FLAG_NOBG | HUD_FLAG_TEAM_SURVIVORS | HUD_FLAG_BLINK;
@@ -126,9 +127,9 @@ public void OnPluginStart() {
 		mapNetClassToName.SetString(ENTITY_KEYs[i], ENTITY_VALUEs[i]);
 
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
-	HookEvent("player_incapacitated", OnPlayerIncapacitated);
+	HookEvent("player_incapacitated", Event_PlayerIncapaciatedInfo_Post);
+	HookEvent("player_death",Event_PlayerDeathInfo_Pre, EventHookMode_Pre);
 	HookEvent("player_death", Event_PlayerDeathInfo_Post);
-	HookEvent("witch_killed", OnWitchKilled);
 
 }
 
@@ -175,87 +176,170 @@ public void OnMapEnd()
 	delete g_hHudDecreaseTimer;
 }
 
-void OnWitchKilled(Event event, const char[] name, bool dontBroadcast) {
-
-	int attacker = GetClientOfUserId(event.GetInt("userid"));
-
-	if (IsClient(attacker)) {
-
-		FormatEx(output, sizeof(output), " %s Killed Witch", GetEntityTranslatedName(attacker));
-		DisplayHUD(output);
-	}
+void Event_PlayerDeathInfo_Pre(Event event, const char[] name, bool dontBroadcast) {
+	event.BroadcastDisabled = true; // by prehook, set this to prevent the red font of kill info.
 }
 
 void Event_PlayerDeathInfo_Post(Event event, const char[] name, bool dontBroadcast) {
-	PrintToChatAll("Event_PlayerDeathInfo_Post");
 	int victim = GetClientOfUserId(event.GetInt("userid")),
 		attacker = GetClientOfUserId(event.GetInt("attacker"));
-	int entityid = event.GetInt("entityid");
-	bool headshot = event.GetBool("headshot");
 	bool bDetectedVictim = false;
 	bool bDetectedAttacker = false;
 	int damagetype = event.GetInt("type");
 	static char victim_name[128];
 	static char attacker_name[128];
+	static char sWeapon[64];
 	if (attacker == 0) {
 		attacker = event.GetInt("attackerentid");
 	}
 	if (IsClient(victim)) {
+		// victim is survivor
 		if ( GetClientTeam(victim) == TEAM_SURVIVOR) {
 			FormatEx(victim_name,sizeof(victim_name),"%N",victim);
 			bDetectedVictim = true;
 		}
+		// victim is special infected
 		else if (GetClientTeam(victim) == TEAM_INFECTED) {
 			event.GetString("victimname", victim_name, sizeof(victim_name));
 			bDetectedVictim = true;
 		}
 	}
-	else if ( IsWitch(entityid) ) {
-		FormatEx(victim_name,sizeof(victim_name),"Witch");
-		bDetectedVictim = true;
+	else {
+		// something is victim
+		int entityid = event.GetInt("entityid");
+		if ( IsWitch(entityid) ) { // maybe victim is Witch
+			FormatEx(victim_name,sizeof(victim_name),"Witch");
+			bDetectedVictim = true;
+		}
 	}
 	if (IsClient(attacker)) {
-		FormatEx(attacker_name, sizeof(attacker_name), "%N", attacker);
+		if (GetClientTeam(attacker) == TEAM_SURVIVOR) {
+			event.GetString("attackername", attacker_name, sizeof(attacker_name));
+			FormatEx(attacker_name, sizeof(attacker_name), "%N", attacker);
+		} else {
+			FormatEx(attacker_name, sizeof(attacker_name), "%N", attacker);
+		}
 		bDetectedAttacker = true;
+	} else {
+		// something is attacker
+		int attackid = event.GetInt("attackerentid");
+		if ( IsWitch(attackid) ) { // maybe is Witch
+			FormatEx(attacker_name,sizeof(attacker_name),"Witch");
+			bDetectedAttacker = true;
+		} else if ( IsCommonInfected(attackid) ) { // maybe is Common Infected
+			FormatEx(attacker_name,sizeof(attacker_name),"Common Infected");
+			bDetectedAttacker = true;
+		}
 	}
 	if (bDetectedAttacker && bDetectedVictim) {
-		FormatEx(output, sizeof(output), " %s Killed %s", GetEntityTranslatedName(attacker), GetEntityTranslatedName(victim));
+		// suicide ?
+		if (victim == attacker) {
+			FormatEx(output, sizeof(output), " %s suicide", attacker_name);
+		} else {
+			FormatEx(output, sizeof(output), " %s killed %s", attacker_name, victim_name);
+		}
 		DisplayHUD(output);
+	} else if (bDetectedVictim) { // detected victim but unsure about attacker
+		int attackid = event.GetInt("attackerentid");
+		event.GetString("weapon", sWeapon,sizeof(sWeapon));
+		if(damagetype & DMG_BURN) { // victim died by burn
+			FormatEx(output, sizeof(output), " %s died by flame", victim_name);
+			DisplayHUD(output);
+		}
+		else if(damagetype & DMG_FALL) { // victim died by falling
+			FormatEx(output, sizeof(output), " %s died by falling", victim_name);
+			DisplayHUD(output);
+		}
+		else if(damagetype & DMG_BLAST) { // victim died by an explosion
+			FormatEx(output, sizeof(output), " %s died by an explosion", victim_name);
+			DisplayHUD(output);
+		}
+		else if(damagetype == (DMG_PREVENT_PHYSICS_FORCE + DMG_NEVERGIB) && strcmp(sWeapon, "world", false) == 0) {
+			FormatEx(output, sizeof(output), " %s died by bleeding", victim_name);
+			DisplayHUD(output);
+		}
+		else if( strncmp(sWeapon, "world", 5, false) == 0 || // "world", "worldspawn" 
+			strncmp(sWeapon, "trigger_hurt", 12, false) == 0 ) // "trigger_hurt", "trigger_hurt_ghost"
+		{
+			FormatEx(output, sizeof(output), " %s died by bleeding", victim_name);
+			DisplayHUD(output);
+		}
 	}
-	else if (attacker == victim && GetClientTeam(victim) == 2) {
-		FormatEx(output, sizeof(output), " %s Died by Bleeding", GetEntityTranslatedName(victim));
-	}
-	PrintToChatAll("bDetectedVictim: %s", bDetectedVictim ? "true" : "false");
-    PrintToChatAll("bDetectedAttacker: %s", bDetectedAttacker ? "true" : "false");
 }
 
-void OnPlayerIncapacitated(Event event, const char[] name, bool dontBroadcast) {
-
-	int victim = GetClientOfUserId(event.GetInt("userid"));
-
+void Event_PlayerIncapaciatedInfo_Post(Event event, const char[] name, bool dontBroadcast) {
+	int victim = GetClientOfUserId(event.GetInt("userid")),
+		attacker = GetClientOfUserId(event.GetInt("attacker"));
+	bool bDetectedVictim = false;
+	bool bDetectedAttacker = false;
+	int damagetype = event.GetInt("type");
+	static char victim_name[128];
+	static char attacker_name[128];
+	static char sWeapon[64];
+	if (attacker == 0) {
+		attacker = event.GetInt("attackerentid");
+	}
 	if (IsClient(victim)) {
-
-		int attacker = GetClientOfUserId(event.GetInt("attacker"));
-
-		if (attacker == 0)
-			attacker = event.GetInt("attackerentid");
-
-		if (attacker == victim && GetClientTeam(attacker) == 2) {
-			
-			FormatEx(output, sizeof(output), " %s Incapped Self", GetEntityTranslatedName(victim));
-
-		// player => tank
-		} else if (GetEntProp(victim, Prop_Send, "m_zombieClass") == L4D2_ZOMBIECLASS_TANK) {
-
-			FormatEx(output, sizeof(output), " %s Killed %s", GetEntityTranslatedName(attacker), GetEntityTranslatedName(victim));
-
-		// entity => player
-		} else if (!IsClient(attacker))
-			FormatEx(output, sizeof(output), " %s Incapped %s", GetEntityTranslatedName(attacker), GetEntityTranslatedName(victim));
-		else
-			return;
-
+		// victim is survivor
+		if ( GetClientTeam(victim) == TEAM_SURVIVOR) {
+			FormatEx(victim_name,sizeof(victim_name),"%N",victim);
+			bDetectedVictim = true;
+		}
+		// victim is special infected
+		else if (GetClientTeam(victim) == TEAM_INFECTED) {
+			event.GetString("victimname", victim_name, sizeof(victim_name));
+			bDetectedVictim = true;
+		}
+	}
+	else {
+		// something is victim
+		int entityid = event.GetInt("entityid");
+		if ( IsWitch(entityid) ) { // maybe victim is Witch
+			FormatEx(victim_name,sizeof(victim_name),"Witch");
+			bDetectedVictim = true;
+		}
+	}
+	if (IsClient(attacker)) {
+		if (GetClientTeam(attacker) == TEAM_SURVIVOR) {
+			event.GetString("attackername", attacker_name, sizeof(attacker_name));
+			FormatEx(attacker_name, sizeof(attacker_name), "%N", attacker);
+		} else {
+			FormatEx(attacker_name, sizeof(attacker_name), "%N", attacker);
+		}
+	} else {
+		// something is attacker
+		int attackid = event.GetInt("attackerentid");
+		if ( IsWitch(attackid) ) { // maybe is Witch
+			FormatEx(attacker_name,sizeof(attacker_name),"Witch");
+			bDetectedAttacker = true;
+		} else if ( IsCommonInfected(attackid) ) { // maybe is Common Infected
+			FormatEx(attacker_name,sizeof(attacker_name),"Common Infected");
+			bDetectedAttacker = true;
+		}
+	}
+	if (bDetectedAttacker && bDetectedVictim) {
+		// suicide ?
+		if (victim == attacker) {
+			FormatEx(output, sizeof(output), " %s self-incapaciated", attacker_name);
+		} else {
+			FormatEx(output, sizeof(output), " %s incapaciated %s", attacker_name, victim_name);
+		}
 		DisplayHUD(output);
+	} else if (bDetectedVictim) { // detected victim but unsure about attacker
+		int attackid = event.GetInt("attackerentid");
+		event.GetString("weapon", sWeapon,sizeof(sWeapon));
+		if(damagetype & DMG_BURN) { // victim died by burn
+			FormatEx(output, sizeof(output), " %s incapaciated by flame", victim_name);
+			DisplayHUD(output);
+		}
+		else if(damagetype & DMG_FALL) { // victim died by falling
+			FormatEx(output, sizeof(output), " %s incapaciated by falling", victim_name);
+			DisplayHUD(output);
+		}
+		else if(damagetype & DMG_BLAST) { // victim died by an explosion
+			FormatEx(output, sizeof(output), " %s incapaciated by an explosion", victim_name);
+			DisplayHUD(output);
+		}
 	}
 }
 
@@ -353,4 +437,15 @@ bool IsWitch(int entity)
         return strcmp(strClassName, CLASSNAME_WITCH, false) == 0;
     }
     return false;
+}
+
+bool IsCommonInfected(int entity)
+{
+	if (entity > 0 && IsValidEntity(entity))
+	{
+		char entType[64];
+		GetEntityNetClass(entity, entType, sizeof(entType));
+		return StrEqual(entType, CLASSNAME_INFECTED);
+	}
+	return false;
 }
