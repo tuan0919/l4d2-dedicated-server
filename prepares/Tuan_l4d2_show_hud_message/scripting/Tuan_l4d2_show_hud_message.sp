@@ -69,7 +69,7 @@ static const char ENTITY_VALUEs[][] = {
 #define L4D2_ZOMBIECLASS_TANK		8
 #define MAX_HUD_NUMBER	4
 #define HUD_TIMEOUT	5.0
-#define HUD_WIDTH	0.3
+#define HUD_WIDTH	0.7
 #define HUD_SLOT	4
 #define HUD_POSITION_X 0.65
 #define CLASSNAME_INFECTED            "Infected"
@@ -96,6 +96,17 @@ static float g_HUDpos[][] = {
     {HUD_POSITION_X,0.16,HUD_WIDTH,0.04},
     {HUD_POSITION_X,0.20,HUD_WIDTH,0.04},
     {HUD_POSITION_X,0.24,HUD_WIDTH,0.04}, // 14
+};
+static char g_ZomNames[9][24] =  {
+	"Unknown", 
+	"Smoker", 
+	"Boomer", 
+	"Hunter", 
+	"Spitter", 
+	"Jockey", 
+	"Charger", 
+	"Unknown", 
+	"Tank"
 };
 static int g_iHUDFlags_Normal = HUD_FLAG_TEXT | HUD_FLAG_ALIGN_LEFT | HUD_FLAG_NOBG | HUD_FLAG_TEAM_SURVIVORS;
 static int g_iHUDFlags_Newest = HUD_FLAG_TEXT | HUD_FLAG_ALIGN_LEFT | HUD_FLAG_NOBG | HUD_FLAG_TEAM_SURVIVORS | HUD_FLAG_BLINK;
@@ -132,6 +143,25 @@ public void OnPluginStart() {
 	HookEvent("player_death", Event_PlayerDeathInfo_Post);
 
 }
+
+public void Tuan_OnClient_UsedThrowable(int client, int throwable_type) {
+	char output[128];
+	switch (throwable_type) {
+		case 0: {
+			FormatEx(output, sizeof(output), "%N thrown molotov", client);
+			DisplayHUD(output);
+		}
+		case 1: {
+			FormatEx(output, sizeof(output), "%N thrown pipebomb", client);
+			DisplayHUD(output);
+		}
+		case 2: {
+			FormatEx(output, sizeof(output), "%N thrown vomitjar", client);
+			DisplayHUD(output);
+		}
+	}
+}
+
 
 char[] GetEntityTranslatedName(int entity) {
 
@@ -200,7 +230,8 @@ void Event_PlayerDeathInfo_Post(Event event, const char[] name, bool dontBroadca
 		}
 		// victim is special infected
 		else if (GetClientTeam(victim) == TEAM_INFECTED) {
-			event.GetString("victimname", victim_name, sizeof(victim_name));
+			int zom_type = GetEntProp(attacker, Prop_Send, "m_zombieClass");
+			FormatEx(victim_name, sizeof(victim_name), g_ZomNames[zom_type]);
 			bDetectedVictim = true;
 		}
 	}
@@ -213,9 +244,9 @@ void Event_PlayerDeathInfo_Post(Event event, const char[] name, bool dontBroadca
 		}
 	}
 	if (IsClient(attacker)) {
-		if (GetClientTeam(attacker) == TEAM_SURVIVOR) {
-			event.GetString("attackername", attacker_name, sizeof(attacker_name));
-			FormatEx(attacker_name, sizeof(attacker_name), "%N", attacker);
+		if (GetClientTeam(attacker) == TEAM_INFECTED) {
+			int zom_type = GetEntProp(attacker, Prop_Send, "m_zombieClass");
+			FormatEx(attacker_name, sizeof(attacker_name), g_ZomNames[zom_type]);
 		} else {
 			FormatEx(attacker_name, sizeof(attacker_name), "%N", attacker);
 		}
@@ -285,27 +316,15 @@ void Event_PlayerIncapaciatedInfo_Post(Event event, const char[] name, bool dont
 			FormatEx(victim_name,sizeof(victim_name),"%N",victim);
 			bDetectedVictim = true;
 		}
-		// victim is special infected
-		else if (GetClientTeam(victim) == TEAM_INFECTED) {
-			event.GetString("victimname", victim_name, sizeof(victim_name));
-			bDetectedVictim = true;
-		}
-	}
-	else {
-		// something is victim
-		int entityid = event.GetInt("entityid");
-		if ( IsWitch(entityid) ) { // maybe victim is Witch
-			FormatEx(victim_name,sizeof(victim_name),"Witch");
-			bDetectedVictim = true;
-		}
 	}
 	if (IsClient(attacker)) {
-		if (GetClientTeam(attacker) == TEAM_SURVIVOR) {
-			event.GetString("attackername", attacker_name, sizeof(attacker_name));
-			FormatEx(attacker_name, sizeof(attacker_name), "%N", attacker);
+		if (GetClientTeam(attacker) == TEAM_INFECTED) {
+			int zom_type = GetEntProp(attacker, Prop_Send, "m_zombieClass");
+			FormatEx(attacker_name, sizeof(attacker_name), g_ZomNames[zom_type]);
 		} else {
 			FormatEx(attacker_name, sizeof(attacker_name), "%N", attacker);
 		}
+		bDetectedAttacker = true;
 	} else {
 		// something is attacker
 		int attackid = event.GetInt("attackerentid");
