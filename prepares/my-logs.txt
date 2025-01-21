@@ -1,0 +1,21 @@
+1:43 1/22/2025
+Rewrite:
+- my-custom-includes
+- Tuan_l4d2_show_hud_message
+- Tuan_l4d_throwable_announcer
+Removed:
+- Tuan_l4d2_death_incap_announcer
+- l4d_grenades_Tun_edited
+- l4d_gear_transfer_Tun_edited
+- Tuan_l4d2_view_player_stats
+- l4d_hp_rewards_Tun_edited
+- l4d_blackandwhiteordead_Tun_edited
+- l4d_explosion_announcer_Tun_edited
+- l4d_announce_healer_Tun_edited
+New:
+- l4d_gear_transfer
+- Tuan_l4d2_death_incap
+- Tuan_l4d_blackandwhiteordead
+- Tuan_l4d_hp_rewards
+Update:
+- cfg/l4d2_custom_cvars

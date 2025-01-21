@@ -1,6 +1,6 @@
 /*
 *	Gear Transfer
-*	Copyright (C) 2023 Silvers
+*	Copyright (C) 2024 Silvers
 *
 *	This program is free software: you can redistribute it and/or modify
 *	it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 
 
 
-#define PLUGIN_VERSION		"2.31"
+#define PLUGIN_VERSION		"2.36"
 
 /*======================================================================================
 	Plugin Info:
@@ -31,6 +31,21 @@
 
 ========================================================================================
 	Change Log:
+
+2.36 (15-Dec-2024)
+	- Now fires the "spawner_give_item" event where required. Thanks to "little_froy" for updating.
+
+2.35 (05-Nov-2024)
+	- Fixed invalid client error, likely due to 3rd party plugin. Thanks to "voledar" for reporting.
+
+2.34 (17-Jun-2024)
+	- Fixed compile errors on SM 1.12. Thanks to "TheStarRocker" for reporting.
+
+2.33 (28-Jan-2024)
+	- Fixed memory leak caused by clearing StringMap/ArrayList data instead of deleting.
+
+2.32 (20-Dec-2023)
+	- Added cvar "l4d_gear_transfer_start" to block auto grab/give for a specified time on round start. Requested by "Iciaria".
 
 2.31 (27-Jul-2023)
 	- Fixed compile error on SourceMod version 1.12. Thanks to "ur5efj" for reporting.
@@ -370,7 +385,6 @@
 #include <sourcemod>
 #include <sdktools>
 #include <sdkhooks>
-#include <tuan_custom>
 
 // Benchmarking: 0=Off. 1=Debug spew. 2=Include Auto Give/Grab timer benchmarking.
 // Auto Give/Grab functions can exit leaving profiler enabled. I don't care to waste time fixing this.
@@ -404,18 +418,18 @@
 
 
 // Cvar handles
-ConVar g_hCvarAllow, g_hCvarDying, g_hCvarDistGive, g_hCvarDistGrab, g_hCvarGive, g_hCvarGrab, g_hCvarIdle, g_hCvarMethod, g_hCvarModesBot, g_hCvarModesOn, g_hCvarModesOff, g_hCvarModesTog, g_hCvarNotify, g_hCvarNotifies, g_hCvarSounds, g_hCvarTimeout, g_hCvarTimerGive, g_hCvarTimerGrab, g_hCvarTraces, g_hCvarTypes, g_hCvarVocalize;
+ConVar g_hCvarAllow, g_hCvarDying, g_hCvarDistGive, g_hCvarDistGrab, g_hCvarGive, g_hCvarGrab, g_hCvarIdle, g_hCvarMethod, g_hCvarModesBot, g_hCvarModesOn, g_hCvarModesOff, g_hCvarModesTog, g_hCvarNotify, g_hCvarNotifies, g_hCvarSounds, g_hCvarStart, g_hCvarTimeout, g_hCvarTimerGive, g_hCvarTimerGrab, g_hCvarTraces, g_hCvarTypes, g_hCvarVocalize;
 ConVar g_hCvarMPGameMode, g_hCvarMaxIncap;
 
 // Cvar variables
 int g_iCvarMaxIncap, g_iCvarDying, g_iCvarGive, g_iCvarGrab, g_iCvarMethod, g_iCvarNotify, g_iCvarNotifies, g_iCvarTypes, g_iCvarTraces, g_iCvarVocalize;
 bool g_bCvarSounds, g_bCvarIdle;
-float g_fDistGive, g_fDistGrab, g_fTimerGive, g_fTimerGrab, g_fCvarTimeout, g_fBlockVocalize;
+float g_fDistGive, g_fDistGrab, g_fCvarStart, g_fTimerGive, g_fTimerGrab, g_fCvarTimeout, g_fBlockVocalize, g_fStartTime;
 
 // Variables
 bool g_bCvarAllow, g_bMapStarted, g_bModeOffAuto, g_bRoundOver, g_bRoundIntro, g_bTranslation, g_bTranslationNew, g_bLeft4Dead2;
 
-GlobalForward g_hForwardGive, g_hForwardGrab, g_hForwardSwap, g_hForwardGiveTuan, g_hForwardSwapTuan;
+GlobalForward g_hForwardGive, g_hForwardGrab, g_hForwardSwap;
 
 // Timer handles
 Handle g_hTimerGrab, g_hTimerGive;
@@ -517,19 +531,6 @@ static const char g_sPickups[9][] =
 	"weapon_upgradepack_explosive",
 	"weapon_upgradepack_incendiary",
 	"weapon_defibrillator"
-};
-
-static const char g_sItemHint[9][] =
-{
-	"icon_equip_adrenaline",
-	"icon_equip_pills",
-	"icon_equip_molotov",
-	"icon_equip_pipebomb",
-	"icon_tip",
-	"icon_equip_medkit",
-	"icon_explosive_ammo",
-	"icon_incendiary_ammo",
-	"icon_defibrillator"
 };
 
 int g_Lengths[9];
@@ -648,8 +649,6 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	g_hForwardGive = new GlobalForward("GearTransfer_OnWeaponGive",						ET_Event, Param_Cell, Param_Cell, Param_Cell);
 	g_hForwardGrab = new GlobalForward("GearTransfer_OnWeaponGrab",						ET_Event, Param_Cell, Param_Cell, Param_Cell);
 	g_hForwardSwap = new GlobalForward("GearTransfer_OnWeaponSwap",						ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
-	g_hForwardGiveTuan = new GlobalForward("GearTransfer_OnWeaponGive_TuanCustom", ET_Event, Param_Cell, Param_Cell, Param_String);
-	g_hForwardSwapTuan = new GlobalForward("GearTransfer_OnWeaponSwap_TuanCustom", ET_Event, Param_Cell, Param_Cell, Param_String, Param_String);
 
 	return APLRes_Success;
 }
@@ -674,10 +673,10 @@ public void OnPluginStart()
 {
 	// Translations
 	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, PLATFORM_MAX_PATH, "translations/l4d2_tun_translation.phrases.txt");
+	BuildPath(Path_SM, sPath, PLATFORM_MAX_PATH, "translations/gear_transfer.new.phrases.txt");
 	if( FileExists(sPath) )
 	{
-		LoadTranslations("l4d2_tun_translation.phrases");
+		LoadTranslations("gear_transfer.new.phrases");
 		g_bTranslationNew = true;
 		g_bTranslation = true;
 	}
@@ -705,8 +704,9 @@ public void OnPluginStart()
 	g_hCvarIdle =			CreateConVar(	"l4d_gear_transfer_idle",			"0",			"0=No, 1=Yes. Can items be transferred with idle players, players will be able to grab and switch items with idle players.", CVAR_FLAGS);
 	g_hCvarMethod =			CreateConVar(	"l4d_gear_transfer_method",			"3",			"0=Off. 1=Shove only, 2=Reload key only, 3=Shove and Reload key to transfer items.", CVAR_FLAGS);
 	g_hCvarNotifies =		CreateConVar(	"l4d_gear_transfer_notifies",		"7",			"Notify on these types of transfers: 1=Give, 2=Grab, 4=Switch, 7=All. Add numbers together.", CVAR_FLAGS);
-	g_hCvarNotify =			CreateConVar(	"l4d_gear_transfer_notify",			"6",			"0=Off, 1=Display transfers to everyone, 2=Also display when transferring pills/adrenaline via the games own system, 4=Display between recipients only. 8=Ignore printing pills/adrenaline and use game prompt only. Add numbers together.", CVAR_FLAGS);
+	g_hCvarNotify =			CreateConVar(	"l4d_gear_transfer_notify",			"1",			"0=Off, 1=Display transfers to everyone, 2=Also display when transferring pills/adrenaline via the games own system, 4=Display between recipients only. 8=Ignore printing pills/adrenaline and use game prompt only. Add numbers together.", CVAR_FLAGS);
 	g_hCvarSounds =			CreateConVar(	"l4d_gear_transfer_sounds",			"1",			"0=Off, 1=Play a sound to the person giving/receiving an item.", CVAR_FLAGS);
+	g_hCvarStart =			CreateConVar(	"l4d_gear_transfer_start",			"0.0",			"Block auto give and auto grab from round start for this many seconds.", CVAR_FLAGS);
 	g_hCvarTimerGive =		CreateConVar(	"l4d_gear_transfer_timer_give",		"1.0",			"0.0=Off. How often to check survivor bot positions to real clients for auto give.", CVAR_FLAGS, true, 0.0, true, 10.0);
 	g_hCvarTimerGrab =		CreateConVar(	"l4d_gear_transfer_timer_grab",		"0.5",			"0.0=Off. How often to check survivor bot positions to item positions for auto grab.", CVAR_FLAGS, true, 0.0, true, 10.0);
 	g_hCvarTimeout =		CreateConVar(	"l4d_gear_transfer_timeout",		"5.0",			"Timeout to stop bots returning an item after switching with a player. Timeout to prevent bots auto grabbing a recently dropped item.", CVAR_FLAGS, true, 1.0);
@@ -743,6 +743,7 @@ public void OnPluginStart()
 	g_hCvarNotify.AddChangeHook(ConVarChanged_Cvars);
 	g_hCvarNotifies.AddChangeHook(ConVarChanged_Cvars);
 	g_hCvarSounds.AddChangeHook(ConVarChanged_Cvars);
+	g_hCvarStart.AddChangeHook(ConVarChanged_Cvars);
 	g_hCvarTimeout.AddChangeHook(ConVarChanged_Cvars);
 	g_hCvarTimerGive.AddChangeHook(ConVarChanged_Cvars);
 	g_hCvarTimerGrab.AddChangeHook(ConVarChanged_Cvars);
@@ -786,6 +787,9 @@ public void OnMapEnd()
 
 void ResetPlugin()
 {
+	g_fBlockVocalize = 0.0;
+	g_fStartTime = 0.0;
+
 	for( int i = 1; i <= MaxClients; i++ )
 	{
 		g_fNextTransfer[i] = 0.0;
@@ -806,12 +810,25 @@ void ResetPlugin()
 
 void ResetItemArray()
 {
-	g_ListMeds.Clear();
-	g_ListNade.Clear();
-	g_ListPack.Clear();
-	g_TypeMeds.Clear();
-	g_TypeNade.Clear();
-	g_TypePack.Clear();
+	// .Clear() is creating a memory leak
+	// g_ListMeds.Clear();
+	// g_ListNade.Clear();
+	// g_ListPack.Clear();
+	// g_TypeMeds.Clear();
+	// g_TypeNade.Clear();
+	// g_TypePack.Clear();
+	delete g_ListMeds;
+	delete g_ListNade;
+	delete g_ListPack;
+	delete g_TypeMeds;
+	delete g_TypeNade;
+	delete g_TypePack;
+	g_ListMeds = new ArrayList();
+	g_ListNade = new ArrayList();
+	g_ListPack = new ArrayList();
+	g_TypeMeds = new ArrayList();
+	g_TypeNade = new ArrayList();
+	g_TypePack = new ArrayList();
 }
 
 public void OnClientPutInServer(int client)
@@ -890,6 +907,7 @@ void GetCvars()
 	g_iCvarNotify = g_hCvarNotify.IntValue;
 	g_iCvarNotifies = g_hCvarNotifies.IntValue;
 	g_bCvarSounds = g_hCvarSounds.BoolValue;
+	g_fCvarStart = g_hCvarStart.FloatValue;
 	g_fCvarTimeout = g_hCvarTimeout.FloatValue;
 	g_fTimerGive = g_hCvarTimerGive.FloatValue;
 	g_fTimerGrab = g_hCvarTimerGrab.FloatValue;
@@ -1118,6 +1136,7 @@ void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 	#endif
 
 	g_bRoundOver = false;
+	g_fStartTime = GetGameTime();
 
 	// Vocalize block
 	if( g_iCvarVocalize && (g_iCvarGive || g_iCvarGrab) )
@@ -1225,6 +1244,8 @@ void Event_WeaponFire(Event event, const char[] name, bool dontBroadcast)
 void Event_WeaponGiven(Event event, const char[] name, bool dontBroadcast)
 {
 	int giver = GetClientOfUserId(event.GetInt("giver"));
+	if( !giver ) return;
+
 	if( !IsFakeClient(giver) )
 		SetNextTransfer(giver, 2.0);
 
@@ -1242,18 +1263,13 @@ void Event_WeaponGiven(Event event, const char[] name, bool dontBroadcast)
 			else
 				type = 1;
 
-			char message[255];
-			char itemTransfer[64];
 			if( g_bTranslationNew )
 			{
-				Format(itemTransfer, sizeof(itemTransfer), "%t", g_sPickups[type]);
-				Format(message, sizeof(message), "%t", "You gave", itemTransfer, client);
-				InstructorHint(client, giver, g_sItemHint[type], g_sItemHint[type], message, "255 255 255", 5.0);
-				// MPrintToChatAll(giver, "Gave", g_sPickups[type], client);
+				MPrintToChatAll(giver, "Gave", g_sPickups[type], client);
 			}
 			else
 			{
-				CPrintToChatAll("\x05%N \x01%t \x04%t \x01%t \x05%N", giver, "Gave", g_sPickups[type], "To", client);
+				CPrintToChatAll(client, "\x05%N \x01%t \x04%t \x01%t \x05%N", giver, "Gave", g_sPickups[type], "To", client);
 			}
 		}
 
@@ -1496,22 +1512,6 @@ void TransferItem(int client, int target, bool b_FromShove)
 		(transferType == METHOD_GIVE || transferType == METHOD_SWAP) && type == TYPE_FIRST)
 	)
 	{
-		char name[64];
-		GetEdictClassname(item, name, sizeof(name));
-		if (strcmp(name, "weapon_pain_pills") == 0) {
-			Call_StartForward(g_hForwardGiveTuan);
-			Call_PushCell(client);
-			Call_PushCell(target);
-			Call_PushString("Pain Pills");
-			Call_Finish();
-		}
-		else if (strcmp(name, "weapon_adrenaline") == 0) {
-			Call_StartForward(g_hForwardGiveTuan);
-			Call_PushCell(client);
-			Call_PushCell(target);
-			Call_PushString("Adrenaline");
-			Call_Finish();
-		}
 		SetNextTransfer(client, 0.5); // Timeout to prevent grabbing straight after the game gives.
 		return;
 	}
@@ -1533,46 +1533,6 @@ void TransferItem(int client, int target, bool b_FromShove)
 			g_fReloadTime[client] = GetGameTime() + 0.4;
 		}
 	}
-}
-
-void InstructorHint(int hint_target, int client_viewer, const char[] icon_onscreen, const char[] icon_offscreen, 
-const char[] hint_message, const char[] hint_color, float hint_time)
-{
-	int entity;
-	entity = CreateEntityByName("env_instructor_hint");
-	if (entity == -1)
-	{
-		LogError("Failed to create 'env_instructor_hint'");
-		return;
-	}
-	char buffer[52];
-	float vPos[3];
-	GetEntPropVector(hint_target, Prop_Data, "m_vecOrigin", vPos);
-
-	FormatEx(buffer, sizeof(buffer), "hint_gear%dTo%d", hint_target, client_viewer);
-	DispatchKeyValue(hint_target, "targetname", buffer);
-	DispatchKeyValue(entity, "hint_target", buffer);
-
-	DispatchKeyValue(entity, "hint_range", "0");
-	DispatchKeyValue(entity, "hint_allow_nodraw_target", "1");
-	DispatchKeyValue(entity, "hint_icon_onscreen", icon_onscreen);
-	DispatchKeyValue(entity, "hint_icon_offscreen", icon_offscreen);
-
-	FormatEx(buffer, sizeof(buffer), "%f", hint_time);
-	DispatchKeyValue(entity, "hint_timeout", buffer);
-	DispatchKeyValue(entity, "hint_static", "0");
-	DispatchKeyValue(entity, "hint_instance_type", "0");
-	DispatchKeyValue(entity, "hint_caption", hint_message);
-	DispatchKeyValue(entity, "hint_color", hint_color);
-	DispatchKeyValue(entity, "hint_forcecaption", "1");
-	DispatchSpawn(entity);
-	TeleportEntity(entity, vPos, NULL_VECTOR, NULL_VECTOR);
-
-	AcceptEntityInput(entity, "ShowHint", client_viewer);
-	FormatEx(buffer, sizeof(buffer), "OnUser1 !self:Kill::%f:-1", hint_time);
-	SetVariantString(buffer);
-	AcceptEntityInput(entity, "AddOutput");
-	AcceptEntityInput(entity, "FireUser1");
 }
 
 
@@ -1630,80 +1590,47 @@ void GiveItem(int client, int target, int item, int slot, int type, int transfer
 	// Notification
 	if( g_iCvarNotify && g_bTranslation && GetGameTime() > g_fBlockVocalize )
 	{
-		char message[255];
-		char itemTransfer[64];
-		float notifyTime = 5.0;
-		Format(itemTransfer, sizeof(itemTransfer), "%t", g_sPickups[type]);
 		if( transferType == METHOD_GIVE && g_iCvarNotifies & NOTIFY_GIVE )
 		{
 			if( !(g_iCvarNotify & NOTIFY_IGNORE) || (type != TYPE_PILLS && type != TYPE_ADREN) )
 			{
-				if( g_bTranslationNew ) {
-					Format(message, sizeof(message), "%t", "You gave", itemTransfer, target);
-					InstructorHint(target, client, g_sItemHint[type], g_sItemHint[type], message, "255 255 255", notifyTime);
-					Format(message, sizeof(message), "%t", "You are given", client, itemTransfer);
-					InstructorHint(target, target, g_sItemHint[type], g_sItemHint[type], message, "255 255 255", notifyTime);
-					//forward
-					Call_StartForward(g_hForwardGiveTuan);
-					Call_PushCell(client);
-					Call_PushCell(target);
-					Call_PushString(itemTransfer);
-					Call_Finish();
-					// MPrintToChatAll(client, "Gave", g_sPickups[type], target);
-				}
+				if( g_bTranslationNew )
+					MPrintToChatAll(client, "Gave", g_sPickups[type], target);
 				else
-					CPrintToChatAll("\x05%N \x01%t \x04%t \x01%t \x05%N", client, "Gave", g_sPickups[type], "To", target);
+					CPrintToChatAll(target, "\x05%N \x01%t \x04%t \x01%t \x05%N", client, "Gave", g_sPickups[type], "To", target);
 			}
 		}
 		else if( transferType == METHOD_GRAB && g_iCvarNotifies & NOTIFY_GRAB )
 		{
 			if( !(g_iCvarNotify & NOTIFY_IGNORE) || (type != TYPE_PILLS && type != TYPE_ADREN) )
 			{
-				if( g_bTranslationNew ) {
-					Format(message, sizeof(message), "%t", "You grab", itemTransfer, target);
-					InstructorHint(client, client, g_sItemHint[type], g_sItemHint[type], message, "255 255 255", notifyTime);
-					// MPrintToChatAll(client, "Grabbed", g_sPickups[type], target);
-				}
+				if( g_bTranslationNew )
+					MPrintToChatAll(client, "Grabbed", g_sPickups[type], target);
 				else
-					CPrintToChatAll("\x05%N \x01%t \x04%t \x01%t \x05%N", client, "Grabbed", g_sPickups[type], "From", target);
+					CPrintToChatAll(target, "\x05%N \x01%t \x04%t \x01%t \x05%N", client, "Grabbed", g_sPickups[type], "From", target);
 			}
 		}
 		else if( transferType == METHOD_SWAP && g_iCvarNotifies & NOTIFY_SWITCH )
 		{
 			type = g_iClientType[client][slot] - 1;
-			int tType = g_iClientType[target][slot] - 1;
-			char itemTransfer2[64];
-			Format(itemTransfer, sizeof(itemTransfer), "%t", g_sPickups[type]);
-			Format(itemTransfer2, sizeof(itemTransfer2), "%t", g_sPickups[tType]);
 
 			if( !(g_iCvarNotify & NOTIFY_IGNORE) || (type != TYPE_PILLS && type != TYPE_ADREN) )
 			{
-				if( g_bTranslationNew ) {
-					Format(message, sizeof(message), "%t", "You switch", itemTransfer2, itemTransfer, target);
-					InstructorHint(client, client, g_sItemHint[tType], g_sItemHint[tType], message, "255 255 255", notifyTime);
-					// MPrintToChatAll(client, "Switched", g_sPickups[type], target);
-					
-					//forward
-					Call_StartForward(g_hForwardSwapTuan);
-					Call_PushCell(client);
-					Call_PushCell(target);
-					Call_PushString(itemTransfer);
-					Call_PushString(itemTransfer2);
-					Call_Finish();
-				}
+				if( g_bTranslationNew )
+					MPrintToChatAll(client, "Switched", g_sPickups[type], target);
 				else
-					CPrintToChatAll("\x05%N \x01%t \x04%t \x01%t \x05%N", client, "Switched", g_sPickups[type], "With", target);
+					CPrintToChatAll(target, "\x05%N \x01%t \x04%t \x01%t \x05%N", client, "Switched", g_sPickups[type], "With", target);
 			}
 
-			// type = g_iClientType[target][slot] - 1;
+			type = g_iClientType[target][slot] - 1;
 
-			// if( !(g_iCvarNotify & NOTIFY_IGNORE) || (type != TYPE_PILLS && type != TYPE_ADREN) )
-			// {
-			// 	if( g_bTranslationNew )
-			// 		MPrintToChatAll(target, "Gave", g_sPickups[type], client);
-			// 	else
-			// 		CPrintToChatAll("\x05%N \x01%t \x04%t \x01%t \x05%N", target, "Gave", g_sPickups[type], "To", client);
-			// }
+			if( !(g_iCvarNotify & NOTIFY_IGNORE) || (type != TYPE_PILLS && type != TYPE_ADREN) )
+			{
+				if( g_bTranslationNew )
+					MPrintToChatAll(target, "Gave", g_sPickups[type], client);
+				else
+					CPrintToChatAll(client, "\x05%N \x01%t \x04%t \x01%t \x05%N", target, "Gave", g_sPickups[type], "To", client);
+			}
 		}
 	}
 
@@ -1846,7 +1773,6 @@ int CreateAndEquip(int client, int type)
 	return 0;
 }
 
-
 Action TimerSwapBack(Handle timer, int client)
 {
 	client = GetClientOfUserId(client);
@@ -1945,6 +1871,7 @@ Action TimerAutoGive(Handle timer)
 	}
 
 	if( g_bRoundIntro ) return Plugin_Continue;
+	if( g_fCvarStart && g_fStartTime + g_fCvarStart > GetGameTime() ) return Plugin_Continue;
 
 	#if BENCHMARK
 	StartProfiling(g_Profiler);
@@ -2053,7 +1980,7 @@ Action TimerAutoGive(Handle timer)
 										// Validate receiver is black and white for first aid/pills/adrenaline
 										if( g_iCvarDying )
 										{
-											switch( type -1 )
+											switch( type - 1 )
 											{
 												case TYPE_FIRST:
 												{
@@ -2405,7 +2332,7 @@ Action TimerAutoGrab(Handle timer)
 
 						SetNextTransfer(bot, 2.0);
 
-						FireEventsFootlocker(bot, EntRefToEntIndex(weapon), type);
+						FireEventsFootlocker(bot, EntRefToEntIndex(weapon), type, spawner);
 
 						Vocalize(bot, type);
 
@@ -2414,7 +2341,7 @@ Action TimerAutoGrab(Handle timer)
 							if( g_bTranslationNew )
 								MPrintToChatAll(bot, "BotGrabbed", g_sPickups[type], 0);
 							else
-								CPrintToChatAll("\x05%N \x01%t \x04%t", bot, "Grabbed", g_sPickups[type]);
+								CPrintToChatAll(0, "\x05%N \x01%t \x04%t", bot, "Grabbed", g_sPickups[type]);
 						}
 
 						// break;
@@ -2451,7 +2378,7 @@ Action TimerAutoGrab(Handle timer)
 // ====================================================================================================
 //					VARIOUS HELPERS
 // ====================================================================================================
-void FireEventsFootlocker(int client, int target, int type)
+void FireEventsFootlocker(int client, int target, int type, bool spawner)
 {
 	Event hEvent = CreateEvent("item_pickup", true);
 	if( hEvent != null )
@@ -2459,6 +2386,18 @@ void FireEventsFootlocker(int client, int target, int type)
 		hEvent.SetInt("userid", GetClientUserId(client));
 		hEvent.SetString("item", g_sPickups[type]);
 		hEvent.Fire();
+	}
+
+	if(spawner)
+	{
+		hEvent = CreateEvent("spawner_give_item", true);
+		if( hEvent != null )
+		{
+			hEvent.SetInt("userid", GetClientUserId(client));
+			hEvent.SetString("item", g_sPickups[type]);
+			hEvent.SetInt("spawner", target);
+			hEvent.Fire();
+		}
 	}
 
 	hEvent = CreateEvent("player_use", true);
@@ -2750,7 +2689,7 @@ void PlaySound(int client, const char sound[32])
 // ====================================================================================================
 // Taken from:
 // https://docs.sourcemod.net/api/index.php?fastload=show&id=151&
-void CPrintToChatAll(const char[] format, any ..., int client = 0)
+void CPrintToChatAll(int client, const char[] format, any ...)
 {
 	static char buffer[192];
 
@@ -2770,7 +2709,7 @@ void CPrintToChatAll(const char[] format, any ..., int client = 0)
 			if( IsClientInGame(i) && !IsFakeClient(i) )
 			{
 				SetGlobalTransTarget(i);
-				VFormat(buffer, sizeof(buffer), format, 2);
+				VFormat(buffer, sizeof(buffer), format, 3);
 				PrintToChat(i, buffer);
 			}
 		}

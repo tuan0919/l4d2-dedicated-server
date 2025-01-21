@@ -13,6 +13,7 @@
 #include <sourcemod>
 #include <left4dhooks>
 #include <Tuan_custom_forwards>
+#include <colors>
 
 public Plugin myinfo = {
 	name			= PLUGIN_NAME_FULL,
@@ -20,28 +21,6 @@ public Plugin myinfo = {
 	description		= PLUGIN_DESCRIPTION,
 	version			= PLUGIN_VERSION,
 	url				= PLUGIN_LINK
-};
-
-static const char ENTITY_KEYs[][] = {
-	"Infected",
-	"Witch",
-	"CInferno",
-	"CPipeBombProjectile",
-	"CWorld",
-	"CEntityFlame",
-	"CInsectSwarm",
-	"CBaseTrigger",
-};
-
-static const char ENTITY_VALUEs[][] = {
-	"Zombie",
-	"Witch",
-	"Fire",
-	"Blast",
-	"World",
-	"Fire",
-	"Spitter",
-	"Map",
 };
 
 // noro.inc start
@@ -71,11 +50,36 @@ static const char ENTITY_VALUEs[][] = {
 #define HUD_TIMEOUT	5.0
 #define HUD_WIDTH	0.7
 #define HUD_SLOT	4
-#define HUD_POSITION_X 0.65
+#define HUD_POSITION_X 0.0
 #define CLASSNAME_INFECTED            "Infected"
 #define CLASSNAME_WITCH               "witch"
 #define TEAM_SURVIVOR		2
 #define TEAM_INFECTED		3
+
+
+static const char WEAPON_NAMES_KEYs[][] = {
+	"weapon_adrenaline",
+	"weapon_pain_pills",
+	"weapon_molotov",
+	"weapon_pipe_bomb",
+	"weapon_vomitjar",
+	"weapon_first_aid_kit",
+	"weapon_upgradepack_explosive",
+	"weapon_upgradepack_incendiary",
+	"weapon_defibrillator"
+};
+
+static const char WEAPON_NAMES_VALUEs[][] = {
+	"adrenaline",
+	"pain pills",
+	"molotov",
+	"pipebomb",
+	"vomitjar",
+	"first aid kit",
+	"upgradepack explosive",
+	"upgradepack incendiary",
+	"defibrillator"
+};
 
 static float g_HUDpos[][] = {
     {0.00,0.00,0.00,0.00}, // 0
@@ -97,19 +101,10 @@ static float g_HUDpos[][] = {
     {HUD_POSITION_X,0.20,HUD_WIDTH,0.04},
     {HUD_POSITION_X,0.24,HUD_WIDTH,0.04}, // 14
 };
-static char g_ZomNames[9][24] =  {
-	"Unknown", 
-	"Smoker", 
-	"Boomer", 
-	"Hunter", 
-	"Spitter", 
-	"Jockey", 
-	"Charger", 
-	"Unknown", 
-	"Tank"
-};
+
 static int g_iHUDFlags_Normal = HUD_FLAG_TEXT | HUD_FLAG_ALIGN_LEFT | HUD_FLAG_NOBG | HUD_FLAG_TEAM_SURVIVORS;
 static int g_iHUDFlags_Newest = HUD_FLAG_TEXT | HUD_FLAG_ALIGN_LEFT | HUD_FLAG_NOBG | HUD_FLAG_TEAM_SURVIVORS | HUD_FLAG_BLINK;
+static char output[256];
 
 enum struct HUD
 {
@@ -123,29 +118,75 @@ enum struct HUD
 	}
 }
 
-StringMap mapNetClassToName;
 ArrayList g_hud_info;
 Handle g_hHudDecreaseTimer;
-char output[128];
+StringMap mapWeaponName;
+
 public void OnPluginStart() {
-
 	CreateConVar(PLUGIN_NAME ... "_version", PLUGIN_VERSION, "Plugin Version of " ... PLUGIN_NAME_FULL, FCVAR_SPONLY|FCVAR_DONTRECORD|FCVAR_REPLICATED|FCVAR_NOTIFY);
-
-	mapNetClassToName = new StringMap();
 	g_hud_info = new ArrayList(ByteCountToCells(128));
-
-	for (int i = 0; i < sizeof(ENTITY_KEYs); i++)
-		mapNetClassToName.SetString(ENTITY_KEYs[i], ENTITY_VALUEs[i]);
-
+	mapWeaponName = new StringMap();
+	for (int i = 0; i < sizeof(WEAPON_NAMES_KEYs); i++)
+		mapWeaponName.SetString(WEAPON_NAMES_KEYs[i], WEAPON_NAMES_VALUEs[i]);
+		
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
-	HookEvent("player_incapacitated", Event_PlayerIncapaciatedInfo_Post);
-	HookEvent("player_death",Event_PlayerDeathInfo_Pre, EventHookMode_Pre);
-	HookEvent("player_death", Event_PlayerDeathInfo_Post);
+}
 
+public void Tuan_OnClient_KillOther(char[] attacker_name, char[] victim_name, char[] weapon_name) {
+	bool isSelf = StrEqual(attacker_name, victim_name);
+	if (StrEqual(weapon_name, "None")) {
+		if (isSelf) {
+			FormatEx(output, sizeof(output), "%s suicide", attacker_name);
+			DisplayHUD(output);
+		} else {
+			FormatEx(output, sizeof(output), "%s killed %s", attacker_name, victim_name);
+			DisplayHUD(output);
+		}
+	}
+}
+
+public void Tuan_OnClient_KilledByUnknown(char[] victim_name, char[] weapon_name) {
+	if (StrEqual(weapon_name, "Flame")) {
+		FormatEx(output, sizeof(output), "%s died by flame", victim_name);
+	}
+	else if (StrEqual(weapon_name, "Explosion")) {
+		FormatEx(output, sizeof(output), "%s died by explosion", victim_name);
+	}
+	else if (StrEqual(weapon_name, "Falling")) {
+		FormatEx(output, sizeof(output), "%s died by falling", victim_name);
+	}
+	else if (StrEqual(weapon_name, "Bleeding")) {
+		FormatEx(output, sizeof(output), "%s died by bleeding", victim_name);
+	}
+	DisplayHUD(output);
+}
+
+public void Tuan_OnClient_IncapOther(char[] attacker_name, char[] victim_name, char[] weapon_name) {
+	bool isSelf = StrEqual(attacker_name, victim_name);
+	if (StrEqual(weapon_name, "None")) {
+		if (isSelf) {
+			FormatEx(output, sizeof(output), "%s self-incapacitated", attacker_name);
+		} else {
+			FormatEx(output, sizeof(output), "%s incapacitated %s", attacker_name, victim_name);
+		}
+		DisplayHUD(output);
+	}
+}
+
+public void Tuan_OnClient_IncappedByUnknown(char[] victim_name, char[] weapon_name) {
+	if (StrEqual(weapon_name, "Flame")) {
+		FormatEx(output, sizeof(output), "%s incapacitated by flame", victim_name);
+	}
+	else if (StrEqual(weapon_name, "Explosion")) {
+		FormatEx(output, sizeof(output), "%s incapacitated by explosion`", victim_name);
+	}
+	else if (StrEqual(weapon_name, "Falling")) {
+		FormatEx(output, sizeof(output), "%s incapacitated by falling", victim_name);
+	}
+	DisplayHUD(output);
 }
 
 public void Tuan_OnClient_UsedThrowable(int client, int throwable_type) {
-	char output[128];
 	switch (throwable_type) {
 		case 0: {
 			FormatEx(output, sizeof(output), "%N thrown molotov", client);
@@ -162,33 +203,30 @@ public void Tuan_OnClient_UsedThrowable(int client, int throwable_type) {
 	}
 }
 
-
-char[] GetEntityTranslatedName(int entity) {
-
-	static char result[32];
-
-	if (IsClient(entity)) {
-
-		if (GetEntProp(entity, Prop_Send, "m_zombieClass") == L4D2_ZOMBIECLASS_TANK && IsFakeClient(entity))
-			result = "Tank";
-		else
-			FormatEx(result, sizeof(result), "%N", entity);
-
+public void Tuan_OnClient_HealedOther(int client, int victim) {
+	if (client == victim) {
+		FormatEx(output, sizeof(output), "%N healed himself and no longer at last life.", client);
 	} else {
-
-		GetEntityNetClass(entity, result, sizeof(result));
-		mapNetClassToName.GetString(result, result, sizeof(result));
+		FormatEx(output, sizeof(output), "%N was healed by %N and no longer at last life.", victim, client);
 	}
+	DisplayHUD(output);
+}
 
-	return result;
+public void Tuan_OnClient_GoBnW(int client) {
+	FormatEx(output, sizeof(output), "%N is at last life", client);
+	DisplayHUD(output);
+}
+
+public void Tuan_OnClient_RevivedOther(int client, int target) {
+	FormatEx(output, sizeof(output), "%N saved %N.", client, target);
+	DisplayHUD(output);
 }
 
 public void OnMapStart() {
 	GameRules_SetProp("m_bChallengeModeActive", true, _, _, true);
 }
 
-void Event_RoundStart(Event event, const char[] name, bool dontBroadcast) 
-{
+void Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
 	for (int slot = KILL_HUD_BASE; slot < MAX_HUD_NUMBER; slot++)
 		RemoveHUD(slot);
 
@@ -198,168 +236,11 @@ void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 	delete g_hHudDecreaseTimer;
 }
 
-public void OnMapEnd()
-{
+public void OnMapEnd() {
 	delete g_hud_info;
 	g_hud_info = new ArrayList(ByteCountToCells(128));
 
 	delete g_hHudDecreaseTimer;
-}
-
-void Event_PlayerDeathInfo_Pre(Event event, const char[] name, bool dontBroadcast) {
-	event.BroadcastDisabled = true; // by prehook, set this to prevent the red font of kill info.
-}
-
-void Event_PlayerDeathInfo_Post(Event event, const char[] name, bool dontBroadcast) {
-	int victim = GetClientOfUserId(event.GetInt("userid")),
-		attacker = GetClientOfUserId(event.GetInt("attacker"));
-	bool bDetectedVictim = false;
-	bool bDetectedAttacker = false;
-	int damagetype = event.GetInt("type");
-	static char victim_name[128];
-	static char attacker_name[128];
-	static char sWeapon[64];
-	if (attacker == 0) {
-		attacker = event.GetInt("attackerentid");
-	}
-	if (IsClient(victim)) {
-		// victim is survivor
-		if ( GetClientTeam(victim) == TEAM_SURVIVOR) {
-			FormatEx(victim_name,sizeof(victim_name),"%N",victim);
-			bDetectedVictim = true;
-		}
-		// victim is special infected
-		else if (GetClientTeam(victim) == TEAM_INFECTED) {
-			int zom_type = GetEntProp(attacker, Prop_Send, "m_zombieClass");
-			FormatEx(victim_name, sizeof(victim_name), g_ZomNames[zom_type]);
-			bDetectedVictim = true;
-		}
-	}
-	else {
-		// something is victim
-		int entityid = event.GetInt("entityid");
-		if ( IsWitch(entityid) ) { // maybe victim is Witch
-			FormatEx(victim_name,sizeof(victim_name),"Witch");
-			bDetectedVictim = true;
-		}
-	}
-	if (IsClient(attacker)) {
-		if (GetClientTeam(attacker) == TEAM_INFECTED) {
-			int zom_type = GetEntProp(attacker, Prop_Send, "m_zombieClass");
-			FormatEx(attacker_name, sizeof(attacker_name), g_ZomNames[zom_type]);
-		} else {
-			FormatEx(attacker_name, sizeof(attacker_name), "%N", attacker);
-		}
-		bDetectedAttacker = true;
-	} else {
-		// something is attacker
-		int attackid = event.GetInt("attackerentid");
-		if ( IsWitch(attackid) ) { // maybe is Witch
-			FormatEx(attacker_name,sizeof(attacker_name),"Witch");
-			bDetectedAttacker = true;
-		} else if ( IsCommonInfected(attackid) ) { // maybe is Common Infected
-			FormatEx(attacker_name,sizeof(attacker_name),"Common Infected");
-			bDetectedAttacker = true;
-		}
-	}
-	if (bDetectedAttacker && bDetectedVictim) {
-		// suicide ?
-		if (victim == attacker) {
-			FormatEx(output, sizeof(output), " %s suicide", attacker_name);
-		} else {
-			FormatEx(output, sizeof(output), " %s killed %s", attacker_name, victim_name);
-		}
-		DisplayHUD(output);
-	} else if (bDetectedVictim) { // detected victim but unsure about attacker
-		int attackid = event.GetInt("attackerentid");
-		event.GetString("weapon", sWeapon,sizeof(sWeapon));
-		if(damagetype & DMG_BURN) { // victim died by burn
-			FormatEx(output, sizeof(output), " %s died by flame", victim_name);
-			DisplayHUD(output);
-		}
-		else if(damagetype & DMG_FALL) { // victim died by falling
-			FormatEx(output, sizeof(output), " %s died by falling", victim_name);
-			DisplayHUD(output);
-		}
-		else if(damagetype & DMG_BLAST) { // victim died by an explosion
-			FormatEx(output, sizeof(output), " %s died by an explosion", victim_name);
-			DisplayHUD(output);
-		}
-		else if(damagetype == (DMG_PREVENT_PHYSICS_FORCE + DMG_NEVERGIB) && strcmp(sWeapon, "world", false) == 0) {
-			FormatEx(output, sizeof(output), " %s died by bleeding", victim_name);
-			DisplayHUD(output);
-		}
-		else if( strncmp(sWeapon, "world", 5, false) == 0 || // "world", "worldspawn" 
-			strncmp(sWeapon, "trigger_hurt", 12, false) == 0 ) // "trigger_hurt", "trigger_hurt_ghost"
-		{
-			FormatEx(output, sizeof(output), " %s died by bleeding", victim_name);
-			DisplayHUD(output);
-		}
-	}
-}
-
-void Event_PlayerIncapaciatedInfo_Post(Event event, const char[] name, bool dontBroadcast) {
-	int victim = GetClientOfUserId(event.GetInt("userid")),
-		attacker = GetClientOfUserId(event.GetInt("attacker"));
-	bool bDetectedVictim = false;
-	bool bDetectedAttacker = false;
-	int damagetype = event.GetInt("type");
-	static char victim_name[128];
-	static char attacker_name[128];
-	static char sWeapon[64];
-	if (attacker == 0) {
-		attacker = event.GetInt("attackerentid");
-	}
-	if (IsClient(victim)) {
-		// victim is survivor
-		if ( GetClientTeam(victim) == TEAM_SURVIVOR) {
-			FormatEx(victim_name,sizeof(victim_name),"%N",victim);
-			bDetectedVictim = true;
-		}
-	}
-	if (IsClient(attacker)) {
-		if (GetClientTeam(attacker) == TEAM_INFECTED) {
-			int zom_type = GetEntProp(attacker, Prop_Send, "m_zombieClass");
-			FormatEx(attacker_name, sizeof(attacker_name), g_ZomNames[zom_type]);
-		} else {
-			FormatEx(attacker_name, sizeof(attacker_name), "%N", attacker);
-		}
-		bDetectedAttacker = true;
-	} else {
-		// something is attacker
-		int attackid = event.GetInt("attackerentid");
-		if ( IsWitch(attackid) ) { // maybe is Witch
-			FormatEx(attacker_name,sizeof(attacker_name),"Witch");
-			bDetectedAttacker = true;
-		} else if ( IsCommonInfected(attackid) ) { // maybe is Common Infected
-			FormatEx(attacker_name,sizeof(attacker_name),"Common Infected");
-			bDetectedAttacker = true;
-		}
-	}
-	if (bDetectedAttacker && bDetectedVictim) {
-		// suicide ?
-		if (victim == attacker) {
-			FormatEx(output, sizeof(output), " %s self-incapaciated", attacker_name);
-		} else {
-			FormatEx(output, sizeof(output), " %s incapaciated %s", attacker_name, victim_name);
-		}
-		DisplayHUD(output);
-	} else if (bDetectedVictim) { // detected victim but unsure about attacker
-		int attackid = event.GetInt("attackerentid");
-		event.GetString("weapon", sWeapon,sizeof(sWeapon));
-		if(damagetype & DMG_BURN) { // victim died by burn
-			FormatEx(output, sizeof(output), " %s incapaciated by flame", victim_name);
-			DisplayHUD(output);
-		}
-		else if(damagetype & DMG_FALL) { // victim died by falling
-			FormatEx(output, sizeof(output), " %s incapaciated by falling", victim_name);
-			DisplayHUD(output);
-		}
-		else if(damagetype & DMG_BLAST) { // victim died by an explosion
-			FormatEx(output, sizeof(output), " %s incapaciated by an explosion", victim_name);
-			DisplayHUD(output);
-		}
-	}
 }
 
 
@@ -373,10 +254,40 @@ void HUDSetLayout(int slot, int flags, const char[] dataval, any ...) {
 	GameRules_SetPropString("m_szScriptedHUDStringSet", str, true, slot);
 }
 
+public void GearTransfer_OnWeaponGive(int client, int target, int item) {
+	L4D2WeaponId weaponId = L4D2_GetWeaponId(item);
+	char weapon_name[64];
+	L4D2_GetWeaponNameByWeaponId(weaponId, weapon_name, sizeof(weapon_name));
+	mapWeaponName.GetString(weapon_name, weapon_name, sizeof(weapon_name));
+	FormatEx(output, sizeof(output), "%N give %s to %N", client, weapon_name, target);
+	DisplayHUD(output);
+}
+
+public void GearTransfer_OnWeaponGrab(int client, int target, int item) {
+	L4D2WeaponId weaponId = L4D2_GetWeaponId(item);
+	char weapon_name[64];
+	L4D2_GetWeaponNameByWeaponId(weaponId, weapon_name, sizeof(weapon_name));
+	mapWeaponName.GetString(weapon_name, weapon_name, sizeof(weapon_name));
+	FormatEx(output, sizeof(output), "%N grabbed %s from %N", client, weapon_name, target);
+	DisplayHUD(output);
+}
+
+public void GearTransfer_OnWeaponSwap(int client, int target, int itemGiven, int itemTaken) {
+	L4D2WeaponId givenWeaponId = L4D2_GetWeaponId(itemGiven);
+	L4D2WeaponId takenWeaponId = L4D2_GetWeaponId(itemTaken);
+	char given_weapon_name[64];
+	char taken_weapon_name[64];
+	L4D2_GetWeaponNameByWeaponId(givenWeaponId, given_weapon_name, sizeof(given_weapon_name));
+	L4D2_GetWeaponNameByWeaponId(takenWeaponId, taken_weapon_name, sizeof(taken_weapon_name));
+	mapWeaponName.GetString(given_weapon_name, given_weapon_name, sizeof(given_weapon_name));
+	mapWeaponName.GetString(taken_weapon_name, taken_weapon_name, sizeof(taken_weapon_name));
+	FormatEx(output, sizeof(output), "%N swap %s for %s with %N", client, given_weapon_name, taken_weapon_name, target);
+	DisplayHUD(output);
+}
+
 //Function-------------------------------
 
-void DisplayHUD(const char[] info)
-{
+void DisplayHUD(const char[] info) {
 	HUD kill_list;
 	FormatEx(kill_list.info, sizeof(kill_list.info), "%s", info);
 	g_hud_info.PushString(info);
@@ -400,8 +311,7 @@ void DisplayHUD(const char[] info)
 
 //Timer-------------------------------
 
-Action Timer_KillHUDDecrease(Handle timer)
-{
+Action Timer_KillHUDDecrease(Handle timer) {
 	if( g_hud_info.Length == 0 )
 	{
 		g_hHudDecreaseTimer = null;
@@ -445,26 +355,4 @@ void RemoveHUD(int slot) {
 	GameRules_SetPropFloat("m_fScriptedHUDWidth", 0.0, slot, true);
 	GameRules_SetPropFloat("m_fScriptedHUDHeight", 0.0, slot, true);
 	GameRules_SetPropString("m_szScriptedHUDStringSet", "", true, slot);
-}
-
-bool IsWitch(int entity)
-{
-    if (entity > 0 && IsValidEntity(entity))
-    {
-        char strClassName[64];
-        GetEntityClassname(entity, strClassName, sizeof(strClassName));
-        return strcmp(strClassName, CLASSNAME_WITCH, false) == 0;
-    }
-    return false;
-}
-
-bool IsCommonInfected(int entity)
-{
-	if (entity > 0 && IsValidEntity(entity))
-	{
-		char entType[64];
-		GetEntityNetClass(entity, entType, sizeof(entType));
-		return StrEqual(entType, CLASSNAME_INFECTED);
-	}
-	return false;
 }

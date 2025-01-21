@@ -15,8 +15,14 @@ Age=1513163249
 [E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\Tuan_l4d2_biletheworld.sp]
 Age=1513163603
 [E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\Tuan_l4d2_show_hud_message.sp]
-Age=1513362548
+Age=1513491387
 [E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\l4d2_custom_commands.sp]
 Age=1513340033
 [E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\Tuan_l4d_throwable_announcer.sp]
 Age=1513361410
+[E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\Tuan_l4d_blackandwhiteordead.sp]
+Age=1513470157
+[E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\Tuan_l4d2_death_incap.sp]
+Age=1513463568
+[E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\l4d_gear_transfer.sp]
+Age=1513489995
