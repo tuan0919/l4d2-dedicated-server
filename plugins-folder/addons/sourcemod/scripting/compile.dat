@@ -11,11 +11,11 @@ Age=1513166913
 [E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\Tuan_l4d2_pipebomb_change_timer.sp]
 Age=1513162946
 [E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\Tuan_l4d_hp_rewards.sp]
-Age=1513163249
+Age=1513558290
 [E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\Tuan_l4d2_biletheworld.sp]
-Age=1513163603
+Age=1513554344
 [E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\Tuan_l4d2_show_hud_message.sp]
-Age=1513491387
+Age=1513558187
 [E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\l4d2_custom_commands.sp]
 Age=1513340033
 [E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\Tuan_l4d_throwable_announcer.sp]
@@ -26,3 +26,11 @@ Age=1513470157
 Age=1513463568
 [E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\l4d_gear_transfer.sp]
 Age=1513489995
+[E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\Tuan_l4d_explosion_announcer.sp]
+Age=1513555247
+[E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\[L4D]Tank_Hud_HP.sp]
+Age=1513535000
+[E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\l4d_incapped_weapons.sp]
+Age=1513525262
+[E:\github-repository\l4d2-dedicated-server\plugins-folder\addons\sourcemod\scripting\WeaponHandling.sp]
+Age=1513558524

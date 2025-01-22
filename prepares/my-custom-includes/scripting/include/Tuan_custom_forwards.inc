@@ -8,6 +8,7 @@ forward void Tuan_OnClient_RevivedOther(int client, int target);
 forward void Tuan_OnClient_GoBnW(int client);
 forward void Tuan_OnClient_UsedThrowable(int client, int throwable_type);
 forward void Tuan_OnClient_BilejarOthers(int client, int[] victims);
+forward void Tuan_OnClient_ExplodeObject(int client, int object_type);
 forward void GearTransfer_OnWeaponGive(int client, int target, int item);
 forward void GearTransfer_OnWeaponGrab(int client, int target, int item);
 forward void GearTransfer_OnWeaponSwap(int client, int target, int itemGiven, int itemTaken); 

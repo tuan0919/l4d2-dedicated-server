@@ -19,3 +19,19 @@ New:
 - Tuan_l4d_hp_rewards
 Update:
 - cfg/l4d2_custom_cvars
+----------------------------------------------------------
+5:10 1/22/2025
+Rewrite:
+- my-custom-includes
+- Tuan_l4d2_show_hud_message
+- Tuan_l4d_hp_rewards
+- Tuan_l4d2_biletheworld
+New:
+- WeaponHandling
+- l4d_incapped_weapons
+- Tuan_l4d_explosion_announcer
+- [L4D]Tank_Hud_HP.smx
+Removed:
+- Tuan_l4d2_pipebomb_change_timer.smx
+Update:
+- cfg/l4d2_custom_cvars 

@@ -56,6 +56,16 @@ public Plugin myinfo = {
 #define TEAM_SURVIVOR		2
 #define TEAM_INFECTED		3
 
+#define TYPE_NONE                     0
+#define TYPE_GASCAN                   1
+#define TYPE_FUEL_BARREL              2
+#define TYPE_PROPANECANISTER          3
+#define TYPE_OXYGENTANK               4
+#define TYPE_BARRICADE_GASCAN         5
+#define TYPE_GAS_PUMP                 6
+#define TYPE_FIREWORKS_CRATE          7
+#define TYPE_OIL_DRUM_EXPLOSIVE       8
+
 
 static const char WEAPON_NAMES_KEYs[][] = {
 	"weapon_adrenaline",
@@ -130,6 +140,7 @@ public void OnPluginStart() {
 		mapWeaponName.SetString(WEAPON_NAMES_KEYs[i], WEAPON_NAMES_VALUEs[i]);
 		
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+	HookEvent("defibrillator_used", Event_Defib_Used, EventHookMode_Pre);
 }
 
 public void Tuan_OnClient_KillOther(char[] attacker_name, char[] victim_name, char[] weapon_name) {
@@ -218,8 +229,13 @@ public void Tuan_OnClient_GoBnW(int client) {
 }
 
 public void Tuan_OnClient_RevivedOther(int client, int target) {
-	FormatEx(output, sizeof(output), "%N saved %N.", client, target);
-	DisplayHUD(output);
+	if (client == target) {
+		FormatEx(output, sizeof(output), "%N self get up", client);
+		DisplayHUD(output);
+	} else {
+		FormatEx(output, sizeof(output), "%N helped %N to get up", client, target);
+		DisplayHUD(output);
+	}
 }
 
 public void OnMapStart() {
@@ -264,12 +280,14 @@ public void GearTransfer_OnWeaponGive(int client, int target, int item) {
 }
 
 public void GearTransfer_OnWeaponGrab(int client, int target, int item) {
-	L4D2WeaponId weaponId = L4D2_GetWeaponId(item);
-	char weapon_name[64];
-	L4D2_GetWeaponNameByWeaponId(weaponId, weapon_name, sizeof(weapon_name));
-	mapWeaponName.GetString(weapon_name, weapon_name, sizeof(weapon_name));
-	FormatEx(output, sizeof(output), "%N grabbed %s from %N", client, weapon_name, target);
-	DisplayHUD(output);
+	if (IsClient(target)) {
+		L4D2WeaponId weaponId = L4D2_GetWeaponId(item);
+		char weapon_name[64];
+		L4D2_GetWeaponNameByWeaponId(weaponId, weapon_name, sizeof(weapon_name));
+		mapWeaponName.GetString(weapon_name, weapon_name, sizeof(weapon_name));
+		FormatEx(output, sizeof(output), "%N grabbed %s from %N", client, weapon_name, target);
+		DisplayHUD(output);
+	}
 }
 
 public void GearTransfer_OnWeaponSwap(int client, int target, int itemGiven, int itemTaken) {
@@ -306,6 +324,69 @@ void DisplayHUD(const char[] info) {
 
 	delete g_hHudDecreaseTimer;
 	g_hHudDecreaseTimer = CreateTimer(HUD_TIMEOUT, Timer_KillHUDDecrease, _, TIMER_REPEAT);
+}
+
+void Event_Defib_Used(Event event, const char[] name, bool dontBroadCast) {
+	int client = event.GetInt("userid");
+	int subject = event.GetInt("subject");
+	client = GetClientOfUserId(client);
+	subject = GetClientOfUserId(subject);
+	if (client > 0 && subject > 0) {
+		FormatEx(output, sizeof(output), "%N brought %N back from dead", client, subject);
+		DisplayHUD(output);
+	}
+}
+
+public void Tuan_OnClient_ExplodeObject(int client, int object_type) {
+	switch (object_type) {
+		case TYPE_GASCAN:
+        {
+			FormatEx(output, sizeof(output), "%N exploded a gascan", client);
+			DisplayHUD(output);
+        }
+
+        case TYPE_FUEL_BARREL:
+        {
+			FormatEx(output, sizeof(output), "%N exploded a fuel barrel", client);
+			DisplayHUD(output);
+        }
+
+        case TYPE_PROPANECANISTER:
+        {
+			FormatEx(output, sizeof(output), "%N exploded a propane canister", client);
+			DisplayHUD(output);
+        }
+
+        case TYPE_OXYGENTANK:
+        {
+			FormatEx(output, sizeof(output), "%N exploded an oxygen tank", client);
+			DisplayHUD(output);
+        }
+
+        case TYPE_BARRICADE_GASCAN:
+        {
+			FormatEx(output, sizeof(output), "%N exploded a barricade gascan", client);
+			DisplayHUD(output);
+        }
+
+        case TYPE_GAS_PUMP:
+        {
+			FormatEx(output, sizeof(output), "%N exploded a gas pump", client);
+			DisplayHUD(output);
+        }
+
+        case TYPE_FIREWORKS_CRATE:
+        {
+			FormatEx(output, sizeof(output), "%N exploded a fireworks crate", client);
+			DisplayHUD(output);
+        }
+
+        case TYPE_OIL_DRUM_EXPLOSIVE:
+        {
+			FormatEx(output, sizeof(output), "%N exploded an oil drum", client);
+			DisplayHUD(output);
+        }
+	}
 }
 
 

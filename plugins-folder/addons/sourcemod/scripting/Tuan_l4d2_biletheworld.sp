@@ -217,20 +217,20 @@ void VomitSplash(bool BoomerDeath, float pos[3], int client)
 				{
 					target = i;
 					checked = true;
-					CPrintToChatAll("{green}[{olive}x{green}] {blue}%N {default}vừa ném {olive}bile jar {default}ngu", client);
+					// CPrintToChatAll("{green}[{olive}x{green}] {blue}%N {default}vừa ném {olive}bile jar {default}ngu", client);
 				}
 				if (i == client) continue; //Không cần thông báo [%N ném .... vào bạn] nếu người ném cũng chính là người nhận
-				Format(message, sizeof(message), "%N vừa ném trà vào bạn", client);
+				Format(message, sizeof(message), "%N thrown vomitjar on you", client);
 				InstructorHint(i, i, "icon_skull", "icon_skull", message, "255 255 255", 5.0);
 			}
 		}
 		if (target == client)
 		{
-			InstructorHint(target, client, "icon_skull", "icon_skull", "Bạn vừa ném trà vào bản thân!", "255 255 255", 5.0);
+			InstructorHint(target, client, "icon_skull", "icon_skull", "You thrown vomitjar to yourself", "255 255 255", 5.0);
 		}
 		else if (target > 0 && target <= MaxClients)
 		{
-			InstructorHint(target, client, "icon_skull", "icon_skull", "Bạn vừa ném trà vào đồng đội!", "255 255 255", 5.0);
+			InstructorHint(target, client, "icon_skull", "icon_skull", "You thrown vomitjar to teamate", "255 255 255", 5.0);
 		}
 	}
 }

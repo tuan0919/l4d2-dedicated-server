@@ -7,7 +7,6 @@
 static bool   g_bL4D2Version;
 
 bool bDistance;
-bool bNotifications;
 bool bSI;
 bool bTank;
 bool IsL4D2;
@@ -102,7 +101,6 @@ public void OnPluginStart()
 	hHRSecond = CreateConVar("l4d_hp_rewards_second", "3", "Rewarded HP For Killing Smokers And Jockeys");
 	hHRThird = CreateConVar("l4d_hp_rewards_third", "5", "Rewarded HP For Killing Hunters And Chargers");
 	hHRDistance = CreateConVar("l4d_hp_rewards_distance", "1", "Enable/Disable Distance Calculations");
-	hHRNotifications = CreateConVar("l4d_hp_rewards_notify", "1", "Notifications Mode: 0=Center Text, 1=Hint Box");
 	hHRMax = CreateConVar("l4d_hp_rewards_max", "200", "Max HP Limit");
 	hHRTank = CreateConVar("l4d_hp_rewards_tank", "1", "Enable/Disable Tank Rewards");
 	hHRWitch = CreateConVar("l4d_hp_rewards_witch", "1", "Enable/Disable Witch Rewards");
@@ -116,7 +114,6 @@ public void OnPluginStart()
 	iSecond = GetConVarInt(hHRSecond);
 	iThird = GetConVarInt(hHRThird);
 	iMax = GetConVarInt(hHRMax);
-	bNotifications = GetConVarBool(hHRNotifications);
 	bDistance = GetConVarBool(hHRDistance);
 	bTank = GetConVarBool(hHRTank);
 	bSI = GetConVarBool(hHRSI);
@@ -139,7 +136,6 @@ public void HRConfigsChanged(Handle convar, const char[] oValue, const char[] nV
 	iSecond = GetConVarInt(hHRSecond);
 	iThird = GetConVarInt(hHRThird);
 	iMax = GetConVarInt(hHRMax);
-	bNotifications = GetConVarBool(hHRNotifications);
 	bDistance = GetConVarBool(hHRDistance);
 	bTank = GetConVarBool(hHRTank);
 	bSI = GetConVarBool(hHRSI);
@@ -155,7 +151,7 @@ public void OnMapEnd()
 	On = false;
 }
 
-public Action OnRoundStart(Handle event, const char[] name, bool dontBroadcast)
+public void OnRoundStart(Handle event, const char[] name, bool dontBroadcast)
 {
 	if(On)
 	{
@@ -165,7 +161,7 @@ public Action OnRoundStart(Handle event, const char[] name, bool dontBroadcast)
 	On = true;
 }
 
-Action OnRewardsReset(Handle event, const char[] name, bool dontBroadcast)
+void OnRewardsReset(Handle event, const char[] name, bool dontBroadcast)
 {
 	if(!On)
 	{
@@ -175,7 +171,7 @@ Action OnRewardsReset(Handle event, const char[] name, bool dontBroadcast)
 	On = false;
 }
 
-Action OnPlayerDeath(Handle event, const char[] name, bool dontBroadcast)
+void OnPlayerDeath(Handle event, const char[] name, bool dontBroadcast)
 {
 	if(On)
 	{
@@ -300,8 +296,8 @@ Action OnPlayerDeath(Handle event, const char[] name, bool dontBroadcast)
 
 			if(cClass != zClassTank)
 			{
-				Format(selfText, sizeof(selfText), "%s %s!! Thưởng %i [Máu ảo] %s", (headshot ? "Headshot" : "Giết"), g_ZombiesNames[cClass], 
-					aHealth, (IsPlayerIncapped(shooter) ? "Khi nằm": ""));
+				Format(selfText, sizeof(selfText), "%s %s bonus %i [HP] %s", (headshot ? "Headshot" : "Killed"), g_ZombiesNames[cClass], 
+					aHealth, (IsPlayerIncapped(shooter) ? "while incapacitated": ""));
 
 				Format(iHintIcon, sizeof(iHintIcon), g_ZombiesIcons[cClass]);
 				DisplayInstructorHint(shooter, selfText, iHintIcon);
