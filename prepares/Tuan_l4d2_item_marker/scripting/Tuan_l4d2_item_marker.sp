@@ -722,8 +722,8 @@ void DoMarkItem(int client, int iEntity, const char[] sEntModelName, char sItemN
 	FormatEx(sTargetName, sizeof(sTargetName), "%s-%02i", "l4d2_item_marker", client);
 	int iGlow = _create_EntityGlow_(iEntity, gCColors.GetColorStr(gc_eMarkerColor[client].id), sEntModelName);
 	int iTarget = _create_InfoTarget_(iEntity, vOrigin, sTargetName, g_fCvar_MarkDuration);
-	Handle hBeamTimer = _create_BeamTimer_(client, gCColors.GetColor(gc_eMarkerColor[client].id), g_iCvar_ModelBeamIndex, iEntity, vOrigin);
-	int iSprite = _create_Sprite_(client, iTarget, vOrigin, gCColors.GetColorStr(gc_eMarkerColor[client].id), sTargetName, g_fCvar_MarkDuration, g_sCvar_ModelSprite);
+	Handle hBeamTimer = _create_BeamTimer_(gCColors.GetColor(gc_eMarkerColor[client].id), g_iCvar_ModelBeamIndex, iEntity, vOrigin);
+	int iSprite = _create_Sprite_(client, iTarget, gCColors.GetColorStr(gc_eMarkerColor[client].id), sTargetName, g_fCvar_MarkDuration, g_sCvar_ModelSprite);
 	Handle hSpriteTimer = _create_SpriteTimer_(iSprite, iEntity);
 	
 	if (IsValidEntityIndex(iGlow) && IsValidEntityIndex(iTarget) && IsValidEntityIndex(iSprite))
@@ -793,7 +793,7 @@ int _create_InfoTarget_(int iEntity, const float vOrigin[3], const char[] sTarge
 // ====================================================================================================
 // beam
 // ====================================================================================================
-Handle _create_BeamTimer_(int client, int color[4], int iModelIndex, int iEntity, const float vOrigin[3])
+Handle _create_BeamTimer_(int color[4], int iModelIndex, int iEntity, const float vOrigin[3])
 {
 	float vEndPos[3];
 	vEndPos = vOrigin;
@@ -862,7 +862,7 @@ int _create_EntityGlow_(int iEntity, char[] sColor, const char[] sEntModelName)
 // ====================================================================================================
 // sprite
 // ====================================================================================================
-int _create_Sprite_(int client, int iTarget, const float vOrigin[3], const char[] sColor, const char[] sTargetName, float duration, const char[] sModelSprite)
+int _create_Sprite_(int client, int iTarget, const char[] sColor, const char[] sTargetName, float duration, const char[] sModelSprite)
 {
 	int entity = CreateEntityByName("env_sprite");
 	char alpha[3];
@@ -986,6 +986,7 @@ Action TimerFieldCallback(Handle timer, DataPack pack)
 			g_eMarker[iEntity].iBeamDirection = DIRECTION_IN;
 		}
 	}
+	return Plugin_Continue;
 }
 
 Action TimerCooldownCallback(Handle timer, int userid)
@@ -1034,7 +1035,6 @@ public void OnWeaponEquipPost(int client, int weapon)
 		return;
 	if (g_eMarker[weapon].created) {
 		DoUnmarkItem(weapon);
-		CPrintToChatAll("%t", "Player Got Marked Item", client, g_eMarker[weapon].sItemName);
 	}
 }
 

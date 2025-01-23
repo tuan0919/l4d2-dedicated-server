@@ -34,4 +34,26 @@ New:
 Removed:
 - Tuan_l4d2_pipebomb_change_timer.smx
 Update:
-- cfg/l4d2_custom_cvars 
+- cfg/l4d2_custom_cvars
+----------------------------------------------------------
+2:07 1/23/2025
+Rewrite:
+- Tuan_l4d_hp_rewards
+- Tuan_l4d2_item_marker
+Removed:
+- [L4D]Tank_Hud_HP
+- l4dffannounce
+New:
+- l4d_tank_showhp
+- Tuan_l4dffannounce
+- drop_secondary
+- actions.ext
+- l4dinfectedbots
+- AI_HardSI
+- l4d2_ty_saveweapons
+- l4d_heartbeat
+- l4d_drop
+- cfg/l4d2_modify_weapon_damage_cvars
+Update:
+- cfg/l4d2_custom_cvars
+- cfg/server

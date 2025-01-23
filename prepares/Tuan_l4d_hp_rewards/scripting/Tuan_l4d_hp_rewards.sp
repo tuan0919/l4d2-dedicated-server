@@ -3,10 +3,6 @@
 #include <sdkhooks>
 #pragma semicolon 1
 #define PLUGIN_VERSION "2.12"
-
-static bool   g_bL4D2Version;
-
-bool bDistance;
 bool bSI;
 bool bTank;
 bool IsL4D2;
@@ -14,8 +10,6 @@ bool On = false;
 Handle hHRFirst;
 Handle hHRSecond;
 Handle hHRThird;
-Handle hHRDistance;
-Handle hHRNotifications;
 Handle hHRMax;
 Handle hHRTank;
 Handle hHRWitch;
@@ -71,15 +65,6 @@ public Plugin myinfo =
 	url = ""
 }
 
-public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
-{
-    EngineVersion engine = GetEngineVersion();
-
-    g_bL4D2Version = (engine == Engine_Left4Dead2);
-
-    return APLRes_Success;
-}
-
 public void OnPluginStart()
 {
 	char game[12];
@@ -97,10 +82,9 @@ public void OnPluginStart()
 	}
 	
 	CreateConVar("l4d_hp_rewards_version", PLUGIN_VERSION, "HP Rewards Version", FCVAR_SPONLY|FCVAR_DONTRECORD);
-	hHRFirst = CreateConVar("l4d_hp_rewards_first", "1", "Rewarded HP For Killing Boomers And Spitters");
+	hHRFirst = CreateConVar("l4d_hp_rewards_first", "2", "Rewarded HP For Killing Boomers And Spitters");
 	hHRSecond = CreateConVar("l4d_hp_rewards_second", "3", "Rewarded HP For Killing Smokers And Jockeys");
 	hHRThird = CreateConVar("l4d_hp_rewards_third", "5", "Rewarded HP For Killing Hunters And Chargers");
-	hHRDistance = CreateConVar("l4d_hp_rewards_distance", "1", "Enable/Disable Distance Calculations");
 	hHRMax = CreateConVar("l4d_hp_rewards_max", "200", "Max HP Limit");
 	hHRTank = CreateConVar("l4d_hp_rewards_tank", "1", "Enable/Disable Tank Rewards");
 	hHRWitch = CreateConVar("l4d_hp_rewards_witch", "1", "Enable/Disable Witch Rewards");
@@ -114,14 +98,11 @@ public void OnPluginStart()
 	iSecond = GetConVarInt(hHRSecond);
 	iThird = GetConVarInt(hHRThird);
 	iMax = GetConVarInt(hHRMax);
-	bDistance = GetConVarBool(hHRDistance);
 	bTank = GetConVarBool(hHRTank);
 	bSI = GetConVarBool(hHRSI);
 	HookConVarChange(hHRFirst, HRConfigsChanged);
 	HookConVarChange(hHRSecond, HRConfigsChanged);
 	HookConVarChange(hHRThird, HRConfigsChanged);
-	HookConVarChange(hHRDistance, HRConfigsChanged);
-	HookConVarChange(hHRNotifications, HRConfigsChanged);
 	HookConVarChange(hHRMax, HRConfigsChanged);
 	HookConVarChange(hHRTank, HRConfigsChanged);
 	HookConVarChange(hHRWitch, HRConfigsChanged);
@@ -136,7 +117,6 @@ public void HRConfigsChanged(Handle convar, const char[] oValue, const char[] nV
 	iSecond = GetConVarInt(hHRSecond);
 	iThird = GetConVarInt(hHRThird);
 	iMax = GetConVarInt(hHRMax);
-	bDistance = GetConVarBool(hHRDistance);
 	bTank = GetConVarBool(hHRTank);
 	bSI = GetConVarBool(hHRSI);
 }
@@ -182,28 +162,22 @@ void OnPlayerDeath(Handle event, const char[] name, bool dontBroadcast)
 			return;
 		}
 
-		float cOrigin[3];
-		GetEntPropVector(client, Prop_Send, "m_vecOrigin", cOrigin);
 		if(bTank)
 		{
 			int tClass = GetEntProp(client, Prop_Send, "m_zombieClass");
+			char selfText[255];
+			char iHintIcon[255];
 			if(tClass == zClassTank)
 			{
 				for (int attacker=1; attacker<=MaxClients; attacker++)
 				{
 					if(IsClientInGame(attacker) && GetClientTeam(attacker) == 2 && IsPlayerAlive(attacker) && !IsPlayerIncapped(attacker))
 					{
-						GiveHealth(attacker);
-						SetEntPropFloat(attacker, Prop_Send, "m_healthBufferTime", GetGameTime());
-						SetEntPropFloat(attacker, Prop_Send, "m_healthBuffer", 0.0);
-						if (g_bL4D2Version)
-						{
-							SetEntProp(attacker, Prop_Send, "m_iGlowType", 0);
-							SetEntProp(attacker, Prop_Send, "m_glowColorOverride", 0);
-							SetEntProp(attacker, Prop_Send, "m_bIsOnThirdStrike", 0);
-						}
-						SetEntProp(attacker, Prop_Send, "m_currentReviveCount", 0);
-						SetEntProp(attacker, Prop_Send, "m_isGoingToDie", 0);
+						int added = GiveBonus(attacker, 20);
+						Format(selfText, sizeof(selfText), "Tank died, bonus %i [HP] for you", added);
+
+						Format(iHintIcon, sizeof(iHintIcon), g_ZombiesIcons[tClass]);
+						DisplayInstructorHint(attacker, selfText, iHintIcon);
 					}
 				}
 			}
@@ -217,87 +191,29 @@ void OnPlayerDeath(Handle event, const char[] name, bool dontBroadcast)
 				return;
 			}
 
-			float sOrigin[3];
-			GetEntPropVector(shooter, Prop_Send, "m_vecOrigin", sOrigin);
-			int dHealth;
-			float oDistance = GetVectorDistance(cOrigin, sOrigin);
-			if(oDistance < 10000.0)
-			{
-				dHealth = RoundToZero(oDistance * 0.02);
-			}
-
-			else if(oDistance >= 10000.0)
-			{
-				dHealth = 200;
-			}
-
 			int aHealth;
 			int cClass = GetEntProp(client, Prop_Send, "m_zombieClass");
-			if(cClass == 2 || (IsL4D2 && cClass == 4))
-			{
-				if(bDistance)
-				{
-					aHealth = iFirst + dHealth;
-				}
-
-				else
-				{
-					aHealth = iFirst;
-				}
+			
+			if(cClass == ZOMBIECLASS_BOOMER || (IsL4D2 && cClass == ZOMBIECLASS_SPITTER)) {
+				aHealth = iFirst;
 			}
 
-			else if(cClass == 1 || (IsL4D2 && cClass == 5))
-			{
-				if(bDistance)
-				{
-					aHealth = iSecond + dHealth;
-				}
-
-				else
-				{
-					aHealth = iSecond;
-				}
-			}
-			else if(cClass == 3 || (IsL4D2 && cClass == 6))
-			{
-				if(bDistance)
-				{
-					aHealth = iThird + dHealth;
-				}
-
-				else
-				{
-					aHealth = iThird;
-				}
+			else if(cClass == ZOMBIECLASS_JOCKEY || (IsL4D2 && cClass == ZOMBIECLASS_SMOKER)) {
+				aHealth = iSecond;
 			}
 			
-			int sHealth = GetClientHealth(shooter);
-			float t_Health = GetTempHealth(shooter) < 0 ? 0.0 : GetTempHealth(shooter);
+			else if(cClass == ZOMBIECLASS_HUNTER || (IsL4D2 && cClass == ZOMBIECLASS_CHARGER)) {
+				aHealth = iThird;
+			}
+			
 			char selfText[255];
 			char iHintIcon[255];
-			if (IsPlayerIncapped(shooter))
-			{
-				aHealth = 10 * aHealth;
-				SetEntProp(shooter, Prop_Send, "m_iHealth", sHealth + aHealth, 1);
-			}
-			else if((sHealth + aHealth) < iMax)
-			{
-				SetEntProp(shooter, Prop_Send, "m_iHealth", sHealth, 1);
-				if (headshot) aHealth = 2 * aHealth;
-				SetTempHealth(shooter, aHealth + t_Health);
-			}
-
-			else
-			{
-				SetEntProp(shooter, Prop_Send, "m_iHealth", iMax, 1);
-				SetEntPropFloat(shooter, Prop_Send, "m_healthBufferTime", GetGameTime());
-				SetEntPropFloat(shooter, Prop_Send, "m_healthBuffer", 0.0);
-			}
-
+			if (headshot) aHealth = 2 * aHealth;
+			int added = GiveBonus(shooter, aHealth);
 			if(cClass != zClassTank)
 			{
 				Format(selfText, sizeof(selfText), "%s %s bonus %i [HP] %s", (headshot ? "Headshot" : "Killed"), g_ZombiesNames[cClass], 
-					aHealth, (IsPlayerIncapped(shooter) ? "while incapacitated": ""));
+					added, (IsPlayerIncapped(shooter) ? "while incapacitated": ""));
 
 				Format(iHintIcon, sizeof(iHintIcon), g_ZombiesIcons[cClass]);
 				DisplayInstructorHint(shooter, selfText, iHintIcon);
@@ -319,12 +235,27 @@ public bool IsPlayerIncapped(int client)
 	}
 }
 
-void GiveHealth(int client)
-{
-	int iflags = GetCommandFlags("give");
-	SetCommandFlags("give", iflags & ~FCVAR_CHEAT);
-	FakeClientCommand(client, "give health");
-	SetCommandFlags("give", iflags);
+int GiveBonus(int client, int aHealth) {
+	int sHealth = GetClientHealth(client); // source health
+	float tHealth = GetTempHealth(client) < 0 ? 0.0 : GetTempHealth(client); // get temp health
+	// incapacitated ?
+	if (IsPlayerIncapped(client)) {
+		// 10 times multiplier
+		aHealth = aHealth * 10;
+		SetEntProp(client, Prop_Send, "m_iHealth", sHealth + aHealth, 1);
+		return aHealth;
+	}
+	if ((sHealth + aHealth) >= iMax) {
+		SetEntProp(client, Prop_Send, "m_iHealth", sHealth, 1);
+		// re-calculate how much buffer health need to add for reaching iMax value
+		int calcHealth = iMax - sHealth;
+		SetTempHealth(client, float(calcHealth));
+		return calcHealth;
+	} else {
+		SetEntProp(client, Prop_Send, "m_iHealth", sHealth, 1);
+		SetTempHealth(client, tHealth + aHealth);
+		return aHealth;
+	}
 }
 
 stock void DisplayInstructorHint(int target, char text[255], char icon[255])
