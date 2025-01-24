@@ -73,3 +73,9 @@ New:
 - l4d2_incapped_crawling
 Update:
 - cfg/l4d2_custom_cvars
+----------------------------------------------------------
+9:43 1/24/2025
+New:
+- l4d2_gun_damage_modify
+Update:
+- data/l4dinfectedbots/*.cfg

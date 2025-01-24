@@ -3,21 +3,16 @@
 	"Player Marked Item"
 	{
 		"#format"	"{1:N},{2:s}"
-		"en"	"{blue}{1} {default}đã {olive}đánh dấu {default}một {blue}[{2}]"
-	}
-	"Player Got Marked Item"
-	{
-		"#format"	"{1:N},{2:s}"
-		"en"	"{blue}{1} {default}đã {olive}nhận được {default}một {blue}[{2}] {default}được {olive}đánh dấu"
+		"en"	"{blue}{1} {default}has {olive}marked {blue}[{2}]"
 	}
 	"Player In Cooldown Message"
 	{
 		"#format"	"{1:s}"
-		"en"	"{default}Không thể {olive}đánh dấu {default}vào lúc này. {olive}({default}chờ: {blue}{1}{olive} {default}giây{olive})"
+		"en"	"{default}Cannot {olive}mark {default}at this moment. {olive}({default}Wait: {blue}{1}{olive} {default}seconds{olive})"
 	}
 	"Player Ready To Use"
 	{
-		"en"	"{default}Tính năng {olive}Đánh dấu {default}đã sẵn sàng để sử dụng"
+		"en"	"{olive}Mark {default}function is ready to use"
 	}
 	"Marker Setting Menu - Title"
 	{
