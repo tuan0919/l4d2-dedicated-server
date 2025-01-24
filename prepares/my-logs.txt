@@ -60,16 +60,16 @@ Update:
 ----------------------------------------------------------
 1:52 1/24/2025
 New:
-- l4d2_dynamic_jump (qol) - testing
-- l4d_use_priority (fixes) - added prepares
-- attachments_api (api) - testing
-- l4d_flashlight (qol) - testing
-- ThirdPersonShoulder_Detect (api) - added prepares
-- _[L4D2]Survivor_Legs (qol) - testing
-- Enhanced_Throwables (qol) - testing
-- l4d_afk_commands (fixes) - testing
-- l4d2_random_si_model (qol) - testing
-- rescue_glow (fixes) - added prepares
-- l4d2_incapped_crawling (qol) - added prepares
+- l4d2_dynamic_jump
+- l4d_use_priority
+- attachments_api
+- l4d_flashlight
+- ThirdPersonShoulder_Detect
+- _[L4D2]Survivor_Legs
+- Enhanced_Throwables
+- l4d_afk_commands
+- l4d2_random_si_model
+- rescue_glow
+- l4d2_incapped_crawling
 Update:
 - cfg/l4d2_custom_cvars
