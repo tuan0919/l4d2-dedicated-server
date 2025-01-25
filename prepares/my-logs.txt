@@ -81,9 +81,11 @@ New:
 Update:
 - data/l4dinfectedbots/*.cfg
 - cfg/server_rates.cfg
+----------------------------------------------------------
 2:17 1/25/2025
 New:
 - l4d2_biletheworld
+- survivor_chat_csm
 Removed:
 - Tuan_l4d2_biletheworld
 Update:
