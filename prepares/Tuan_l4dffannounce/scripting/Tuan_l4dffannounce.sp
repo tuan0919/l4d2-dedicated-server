@@ -148,7 +148,7 @@ Action AnnounceFF(Handle timer, int attackerc) //Called if the attacker did not 
 				if (IsClientInGame(attackerc) && !IsFakeClient(attackerc))
 					CPrintToChat(attackerc, "{default}You did {blue}%i {olive}friendly-fire {default}on {blue}%s" , DamageCache[attackerc][i], victim);
 				if (IsClientInGame(i) && !IsFakeClient(i))
-					CPrintToChat(i, "{blue}%N {default} did {blue}%i {olive}friendly-fire {default}on you", attacker, DamageCache[attackerc][i]);
+					CPrintToChat(i, "{blue}%s {default} did {blue}%i {olive}friendly-fire {default}on you", attacker, DamageCache[attackerc][i]);
 			}
 			DamageCache[attackerc][i] = 0;
 		}
