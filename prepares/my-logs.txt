@@ -90,3 +90,12 @@ Removed:
 - Tuan_l4d2_biletheworld
 Update:
 - cfg/l4d2_custom_cvars
+----------------------------------------------------------
+1:34 1/28/2025
+Disabled:
+- Tuan_l4dffannounce
+- l4d2_dynamic_jump
+New:
+- l4dffannounce
+Update:
+- data/l4dinfectedbots/coop.cfg
