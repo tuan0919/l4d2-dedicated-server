@@ -99,3 +99,11 @@ New:
 - l4dffannounce
 Update:
 - data/l4dinfectedbots/coop.cfg
+----------------------------------------------------------
+8:11 1/28/2025
+New:
+- cfg/sourcemod/*.cfg
+Rewrite:
+- Tuan_night_vision
+Update:
+- data/l4dinfectedbots/server.cfg
