@@ -41,6 +41,14 @@ int g_iEntRef[MAXPLAYERS] = {INVALID_ENT_REFERENCE, ...};
 float g_fLastPress[MAXPLAYERS];
 bool g_bEnabled[MAXPLAYERS];
 
+
+public void OnPluginStart()
+{
+	HookEvent("revive_success", OnReviveSuccess);
+	HookEvent("player_death", OnPlayerDeath);
+}
+
+
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	EngineVersion test = GetEngineVersion();
@@ -52,6 +60,43 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	}
 
 	return APLRes_Success;
+}
+
+
+public void OnReviveSuccess(Event event, const char[] name, bool dontBroadcast)
+{
+	if (!event.GetBool("lastlife"))
+	{
+		return;
+	}
+	
+	int revived = GetClientOfUserId(event.GetInt("subject"));
+	if (revived)
+	{
+		if (GetClientTeam(revived) != 2 && GetClientTeam(revived) != 4)
+		{
+			return;
+		}
+		DeletePlayerCC(revived);
+		g_fLastPress[revived] = 0.0;
+		g_bEnabled[revived] = false;
+	}
+}
+
+
+public void OnPlayerDeath(Event event, const char[] name, bool dontBroadcast)
+{
+	int died = GetClientOfUserId(event.GetInt("userid"));
+	if (died)
+	{
+		if (GetClientTeam(died) != 2 && GetClientTeam(died) != 4)
+		{
+			return;
+		}
+		DeletePlayerCC(died);
+		g_fLastPress[died] = 0.0;
+		g_bEnabled[died] = false;
+	}
 }
 
 public void OnClientDisconnect(int client)

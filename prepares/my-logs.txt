@@ -107,3 +107,7 @@ Rewrite:
 - Tuan_night_vision
 Update:
 - data/l4dinfectedbots/server.cfg
+----------------------------------------------------------
+3:45 3/2/2025
+Rewrite:
+- Tuan_night_vision
